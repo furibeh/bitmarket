@@ -1,0 +1,3 @@
+# Root .gitignore covers node_modules, .next, env files and build outputs.
+next-env.d.ts
+*.pem

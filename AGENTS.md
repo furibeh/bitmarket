@@ -19,20 +19,21 @@ Los marcados TODO todavía no existen.
 | Acción | Comando |
 | --- | --- |
 | Instalar backend | `cd backend && ./mvnw -q dependency:go-offline` |
-| Instalar frontend | TODO `cd frontend && pnpm install` |
+| Instalar frontend | `cd frontend && pnpm install` |
 | Base de datos local | `docker compose up -d` |
 | Levantar backend | `cd backend && ./mvnw spring-boot:run` |
-| Levantar frontend | TODO `cd frontend && pnpm dev` |
+| Levantar frontend | `cd frontend && pnpm dev` |
 | Tests unitarios backend | `cd backend && ./mvnw test` (solo `*Test`, sin Docker) |
 | Todos los tests backend | `cd backend && ./mvnw verify` (`*Test` + `*IT` con Testcontainers, `ApplicationModules.verify()` y `spotless:check`) |
 | Un test unitario | `cd backend && ./mvnw test -Dtest=NombreTest#metodo` |
 | Un test de integración | `cd backend && ./mvnw verify -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=NombreIT` |
-| Tests frontend | TODO `cd frontend && pnpm test` (Vitest) |
-| Un test frontend | TODO `cd frontend && pnpm vitest run ruta/al/archivo` |
+| Tests frontend | `cd frontend && pnpm test` (Vitest) |
+| Un test frontend | `cd frontend && pnpm vitest run ruta/al/archivo` |
 | E2E | TODO `cd frontend && pnpm playwright test` (requiere Docker Compose) |
-| Lint | TODO frontend `pnpm lint` (ESLint, config de Next); backend sin linter aparte |
-| Formato | backend `cd backend && ./mvnw spotless:apply` (google-java-format); frontend TODO `pnpm format` (Prettier) |
-| Comprobar formato | backend `cd backend && ./mvnw spotless:check`; frontend TODO `pnpm format:check` (ambos en CI) |
+| Lint | frontend `cd frontend && pnpm lint` (ESLint, config de Next); backend sin linter aparte |
+| Formato | backend `cd backend && ./mvnw spotless:apply` (google-java-format); frontend `cd frontend && pnpm format` (Prettier) |
+| Comprobar formato | backend `cd backend && ./mvnw spotless:check`; frontend `cd frontend && pnpm format:check` (ambos en CI) |
+| Typecheck frontend | `cd frontend && pnpm typecheck` (`next typegen` + `tsc --noEmit`) |
 | Migraciones | Flyway al arrancar el backend; nuevas en `backend/src/main/resources/db/migration/` |
 | Tipos API frontend | TODO regenerar desde OpenAPI con `openapi-typescript` |
 
