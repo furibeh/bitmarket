@@ -9,6 +9,7 @@ Tienda en línea colombiana de tecnología: variantes con precio y stock propios
 - Si el plan supera ~400 líneas de producción, propón partir el issue.
 - Commits pequeños con Conventional Commits.
 - Nunca hagas push ni merge. Nunca hagas commit de secretos.
+- El workflow `ci` (`.github/workflows/ci.yml`, jobs `backend` y `frontend`) es el *required check* de `main`: un PR solo se fusiona con ambos en verde.
 - Si algo no está decidido en docs/, pregunta; no decidas en silencio.
 - Cita las reglas de negocio por su ID (`RN-xx`) y los casos de borde (`B-xx`) de `docs/design.md` en planes, tests y PR.
 - Una decisión de arquitectura nueva con alternativas reales requiere un ADR en `docs/adr/` (siguiente número, plantilla de los existentes).
