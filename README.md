@@ -4,7 +4,7 @@ Tienda en línea colombiana de tecnología y equipos de cómputo, con productos 
 
 Es un proyecto de portafolio y aprendizaje con datos ficticios, pensado para estar preparado para producción.
 
-**Estado: 🟡 En desarrollo.** Existe el esqueleto del backend (Spring Boot + Flyway) y del frontend (Next.js) con CI; las funcionalidades del MVP siguen planeadas. La documentación base está en [`docs/`](docs/).
+**Estado: 🟡 En desarrollo.** Existe el esqueleto del backend (Spring Boot + Flyway) y del frontend (Next.js); las funcionalidades del MVP siguen planeadas. La documentación base está en [`docs/`](docs/).
 
 ## Funcionalidades
 
@@ -44,7 +44,7 @@ Todas están **planeadas** para el MVP:
 
 ## Cómo ejecutar
 
-Requisitos: Java 25, Node 24 (ver `frontend/.nvmrc`), pnpm (con `corepack enable` se usa la versión fijada en `frontend/package.json`) y Docker.
+Requisitos: Java 25, Node 24 (ver `frontend/.nvmrc`), pnpm 12.11.2 (la versión de `packageManager` en `frontend/package.json`) y Docker con Compose v2.
 
 1. Levanta PostgreSQL 17 desde la raíz del repositorio:
 
@@ -52,7 +52,7 @@ Requisitos: Java 25, Node 24 (ver `frontend/.nvmrc`), pnpm (con `corepack enable
    docker compose up -d
    ```
 
-   Escucha en `localhost:5432` con base, usuario y contraseña `bitmarket` (configurables con `DB_NAME`, `DB_USER` y `DB_PASSWORD`). Si ya tienes otro PostgreSQL en el puerto 5432, detenlo antes.
+   Escucha en `localhost:5432` con base, usuario y contraseña `bitmarket`. Si ya tienes otro PostgreSQL en el puerto 5432, detenlo antes.
 
 2. Arranca el backend; Flyway aplica las migraciones al iniciar:
 
@@ -72,6 +72,8 @@ Cognito, Mercado Pago y los datos semilla se documentarán en la guía de demo.
 
 ## Cómo probar
 
+Cada línea se ejecuta desde la raíz del repositorio.
+
 Backend:
 
 ```sh
@@ -87,7 +89,5 @@ cd frontend && pnpm format:check
 cd frontend && pnpm typecheck
 cd frontend && pnpm test
 ```
-
-Cada línea se ejecuta desde la raíz del repositorio.
 
 El resto de comandos (formato, ejecutar un solo test) está en [`AGENTS.md`](AGENTS.md#comandos). Los tests E2E con Playwright todavía no existen.
