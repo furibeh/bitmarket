@@ -4,7 +4,7 @@ Tienda en línea colombiana de tecnología y equipos de cómputo, con productos 
 
 Es un proyecto de portafolio y aprendizaje con datos ficticios, pensado para estar preparado para producción.
 
-**Estado: 🟡 En diseño.** Todavía no hay código; la documentación base está en [`docs/`](docs/).
+**Estado: 🟡 En desarrollo.** Existe el esqueleto del backend (Spring Boot + Flyway) y del frontend (Next.js) con CI; las funcionalidades del MVP siguen planeadas. La documentación base está en [`docs/`](docs/).
 
 ## Funcionalidades
 
@@ -44,8 +44,50 @@ Todas están **planeadas** para el MVP:
 
 ## Cómo ejecutar
 
-TODO: se completará cuando exista el esqueleto del proyecto (Docker Compose para PostgreSQL, backend con Maven y frontend con pnpm).
+Requisitos: Java 25, Node 24 (ver `frontend/.nvmrc`), pnpm (con `corepack enable` se usa la versión fijada en `frontend/package.json`) y Docker.
+
+1. Levanta PostgreSQL 17 desde la raíz del repositorio:
+
+   ```sh
+   docker compose up -d
+   ```
+
+   Escucha en `localhost:5432` con base, usuario y contraseña `bitmarket` (configurables con `DB_NAME`, `DB_USER` y `DB_PASSWORD`). Si ya tienes otro PostgreSQL en el puerto 5432, detenlo antes.
+
+2. Arranca el backend; Flyway aplica las migraciones al iniciar:
+
+   ```sh
+   cd backend && ./mvnw spring-boot:run
+   ```
+
+3. En otra terminal, arranca el frontend:
+
+   ```sh
+   cd frontend && pnpm install && pnpm dev
+   ```
+
+4. Abre `http://localhost:3000`.
+
+Cognito, Mercado Pago y los datos semilla se documentarán en la guía de demo.
 
 ## Cómo probar
 
-TODO: se completará con los comandos de tests del backend (`*Test` / `*IT`), del frontend (Vitest) y del E2E (Playwright).
+Backend:
+
+```sh
+cd backend && ./mvnw test     # unitarios (*Test), sin Docker
+cd backend && ./mvnw verify   # *Test + *IT con Testcontainers, ApplicationModules.verify() y spotless:check; requiere Docker
+```
+
+Frontend:
+
+```sh
+cd frontend && pnpm lint
+cd frontend && pnpm format:check
+cd frontend && pnpm typecheck
+cd frontend && pnpm test
+```
+
+Cada línea se ejecuta desde la raíz del repositorio.
+
+El resto de comandos (formato, ejecutar un solo test) está en [`AGENTS.md`](AGENTS.md#comandos). Los tests E2E con Playwright todavía no existen.
