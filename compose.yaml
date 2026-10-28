@@ -2,7 +2,7 @@ services:
   postgres:
     image: postgres:17
     environment:
-      POSTGRES_DB: bitmarket
+      POSTGRES_DB: ${DB_NAME:-bitmarket}
       POSTGRES_USER: ${DB_USER:-bitmarket}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-bitmarket}
     ports:
