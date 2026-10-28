@@ -14,25 +14,25 @@ Tienda en línea colombiana de tecnología: variantes con precio y stock propios
 - Una decisión de arquitectura nueva con alternativas reales requiere un ADR en `docs/adr/` (siguiente número, plantilla de los existentes).
 
 ## Comandos
-Todavía no hay código: todos son TODO hasta que exista el esqueleto.
+Los marcados TODO todavía no existen.
 
 | Acción | Comando |
 | --- | --- |
-| Instalar backend | TODO `cd backend && ./mvnw -q dependency:go-offline` |
+| Instalar backend | `cd backend && ./mvnw -q dependency:go-offline` |
 | Instalar frontend | TODO `cd frontend && pnpm install` |
-| Base de datos local | TODO `docker compose up -d` |
-| Levantar backend | TODO `cd backend && ./mvnw spring-boot:run` |
+| Base de datos local | `docker compose up -d` |
+| Levantar backend | `cd backend && ./mvnw spring-boot:run` |
 | Levantar frontend | TODO `cd frontend && pnpm dev` |
-| Tests unitarios backend | TODO `cd backend && ./mvnw test` (solo `*Test`, sin Docker) |
-| Todos los tests backend | TODO `cd backend && ./mvnw verify` (`*Test` + `*IT` con Testcontainers, `ApplicationModules.verify()` y `spotless:check`) |
-| Un test unitario | TODO `cd backend && ./mvnw test -Dtest=NombreTest#metodo` |
-| Un test de integración | TODO `cd backend && ./mvnw verify -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=NombreIT` |
+| Tests unitarios backend | `cd backend && ./mvnw test` (solo `*Test`, sin Docker) |
+| Todos los tests backend | `cd backend && ./mvnw verify` (`*Test` + `*IT` con Testcontainers, `ApplicationModules.verify()` y `spotless:check`) |
+| Un test unitario | `cd backend && ./mvnw test -Dtest=NombreTest#metodo` |
+| Un test de integración | `cd backend && ./mvnw verify -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=NombreIT` |
 | Tests frontend | TODO `cd frontend && pnpm test` (Vitest) |
 | Un test frontend | TODO `cd frontend && pnpm vitest run ruta/al/archivo` |
 | E2E | TODO `cd frontend && pnpm playwright test` (requiere Docker Compose) |
 | Lint | TODO frontend `pnpm lint` (ESLint, config de Next); backend sin linter aparte |
-| Formato | TODO backend `./mvnw spotless:apply` (google-java-format); frontend `pnpm format` (Prettier) |
-| Comprobar formato | TODO backend `./mvnw spotless:check`; frontend `pnpm format:check` (ambos en CI) |
+| Formato | backend `cd backend && ./mvnw spotless:apply` (google-java-format); frontend TODO `pnpm format` (Prettier) |
+| Comprobar formato | backend `cd backend && ./mvnw spotless:check`; frontend TODO `pnpm format:check` (ambos en CI) |
 | Migraciones | Flyway al arrancar el backend; nuevas en `backend/src/main/resources/db/migration/` |
 | Tipos API frontend | TODO regenerar desde OpenAPI con `openapi-typescript` |
 
@@ -63,3 +63,4 @@ Todavía no hay código: todos son TODO hasta que exista el esqueleto.
 - `spring.jpa.open-in-view=false`.
 - Logs JSON con `X-Request-Id`; nunca registrar token de tarjeta, dirección, teléfono ni correo.
 - Secretos solo por variables de entorno (SSM en AWS, `.env` ignorado en local).
+- Idioma: el código en inglés (identificadores, nombres de tests, comentarios, javadoc, nombres de migraciones); los `@DisplayName` de los tests en español citando `RN-xx`/`B-xx`; commits, issues, PR y `docs/` en español.

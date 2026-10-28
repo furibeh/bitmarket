@@ -1,0 +1,1 @@
+-- Baseline: no schema yet. Each module adds its own tables in later migrations.
