@@ -4,11 +4,11 @@ Tienda en línea colombiana de tecnología y equipos de cómputo, con productos 
 
 Es un proyecto de portafolio y aprendizaje con datos ficticios, pensado para estar preparado para producción.
 
-**Estado: 🟡 En desarrollo.** Existe el esqueleto del backend (Spring Boot + Flyway) y del frontend (Next.js); las funcionalidades del MVP siguen planeadas. La documentación base está en [`docs/`](docs/).
+**Estado: 🟡 En desarrollo.** Existen el esqueleto del backend (Spring Boot + Flyway) y del frontend (Next.js) y el CI en GitHub Actions; el resto de funcionalidades del MVP sigue planeado. La documentación base está en [`docs/`](docs/).
 
 ## Funcionalidades
 
-Todas están **planeadas** para el MVP:
+Las marcadas están hechas; el resto está **planeado** para el MVP:
 
 - [ ] Catálogo con categorías, búsqueda por nombre y productos con variantes (SKU, atributos, precio y stock por variante).
 - [ ] Registro obligatorio de compradores y "Mis pedidos" con el estado de cada pedido.
@@ -17,7 +17,8 @@ Todas están **planeadas** para el MVP:
 - [ ] Estados de pedido y pago actualizados por la respuesta de Mercado Pago, por webhooks verificados y por reconciliación.
 - [ ] Panel web de administración: productos, variantes, stock, pedidos y estado de envío.
 - [ ] Servidor MCP para el administrador: consultas de pedidos, inventario y ventas, y ajuste de stock con confirmación en dos pasos.
-- [ ] Tests de integración con Testcontainers, CI en GitHub Actions y despliegue efímero en AWS.
+- [x] CI en GitHub Actions: el workflow `ci` ejecuta los tests y las comprobaciones del backend y del frontend en cada PR y push a `main`, y es *required check* para fusionar en `main` (el E2E de humo con Playwright llegará con el MVP).
+- [ ] Tests de integración con Testcontainers y despliegue efímero en AWS.
 
 ## Stack
 
