@@ -52,7 +52,7 @@ Requisitos: Java 25, Node 24 (ver `frontend/.nvmrc`), pnpm 12.11.2 (la versión 
    docker compose up -d
    ```
 
-   Escucha en `localhost:5432` con base, usuario y contraseña `bitmarket`. Si ya tienes otro PostgreSQL en el puerto 5432, detenlo antes.
+   Escucha en `localhost:5432` con base, usuario y contraseña `bitmarket`; para usar otros valores, ver [Configurar la base de datos local](#configurar-la-base-de-datos-local). Si ya tienes otro PostgreSQL en el puerto 5432, detenlo antes.
 
 2. Arranca el backend; Flyway aplica las migraciones al iniciar:
 
@@ -67,6 +67,33 @@ Requisitos: Java 25, Node 24 (ver `frontend/.nvmrc`), pnpm 12.11.2 (la versión 
    ```
 
 4. Abre `http://localhost:3000`.
+
+### Configurar la base de datos local
+
+Compose y el backend leen estas variables de entorno:
+
+| Variable | Valor por defecto | La leen |
+| --- | --- | --- |
+| `DB_NAME` | `bitmarket` | Compose y backend |
+| `DB_USER` | `bitmarket` | Compose y backend |
+| `DB_PASSWORD` | `bitmarket` | Compose y backend |
+| `DB_URL` | `jdbc:postgresql://localhost:5432/${DB_NAME}` | Solo el backend |
+
+`DB_URL` toma `DB_NAME`, así que solo hace falta definirla para conectar el backend a otro PostgreSQL (otro host o puerto); el contenedor de `compose.yaml` publica siempre el puerto 5432.
+
+Para usar otros valores, expórtalos **en la terminal de `docker compose` y en la del backend**:
+
+```sh
+export DB_NAME=mi_base DB_USER=mi_usuario DB_PASSWORD=mi_contraseña
+```
+
+Un archivo `.env` en la raíz lo lee Compose, pero no el backend: si defines las variables solo ahí, el backend se conecta con los valores por defecto y falla la autenticación.
+
+La imagen de PostgreSQL solo aplica `DB_NAME`, `DB_USER` y `DB_PASSWORD` al inicializar un volumen vacío. Si ya levantaste la base con otros valores, recrea el volumen; **esto borra los datos locales**:
+
+```sh
+docker compose down -v && docker compose up -d
+```
 
 Cognito, Mercado Pago y los datos semilla se documentarán en la guía de demo.
 

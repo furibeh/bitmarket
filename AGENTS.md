@@ -22,6 +22,7 @@ Los marcados TODO todavía no existen.
 | Instalar backend | `cd backend && ./mvnw -q dependency:go-offline` |
 | Instalar frontend | `cd frontend && pnpm install` |
 | Base de datos local | `docker compose up -d` |
+| Recrear la base de datos local (borra los datos) | `docker compose down -v && docker compose up -d` |
 | Levantar backend | `cd backend && ./mvnw spring-boot:run` |
 | Levantar frontend | `cd frontend && pnpm dev` |
 | Tests unitarios backend | `cd backend && ./mvnw test` (solo `*Test`, sin Docker) |
