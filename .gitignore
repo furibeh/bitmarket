@@ -1,0 +1,45 @@
+# Metodología y Claude Code
+.implementando
+.claude/settings.local.json
+
+# Secretos locales
+.env
+.env.*
+!.env.example
+
+# Java / Maven
+target/
+*.class
+hs_err_pid*.log
+
+# Node / Next.js / pnpm
+node_modules/
+.next/
+out/
+.pnpm-store/
+*.tsbuildinfo
+npm-debug.log*
+pnpm-debug.log*
+
+# Tests y cobertura
+coverage/
+playwright-report/
+test-results/
+blob-report/
+playwright/.cache/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+*.tfplan
+
+# IDE y sistema
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+.DS_Store

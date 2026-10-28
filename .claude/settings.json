@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./mvnw -q dependency:go-offline)",
+      "Bash(./mvnw test:*)",
+      "Bash(./mvnw verify:*)",
+      "Bash(./mvnw spring-boot:run:*)",
+      "Bash(./mvnw spotless:apply)",
+      "Bash(./mvnw spotless:check)",
+      "Bash(pnpm install)",
+      "Bash(pnpm dev)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm vitest run:*)",
+      "Bash(pnpm playwright test:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm format)",
+      "Bash(pnpm format:check)",
+      "Bash(docker compose up -d:*)",
+      "Bash(docker compose ps:*)",
+      "Bash(docker compose logs:*)",
+      "Bash(docker compose stop:*)"
+    ]
+  }
+}
