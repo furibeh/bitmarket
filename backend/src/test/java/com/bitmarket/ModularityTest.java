@@ -22,13 +22,6 @@ class ModularityTest {
   void detectsSevenBusinessModulesAndShared() {
     assertThat(modules.stream().map(ApplicationModule::getIdentifier).map(Object::toString))
         .containsExactlyInAnyOrder(
-            "customers",
-            "catalog",
-            "inventory",
-            "cart",
-            "orders",
-            "payments",
-            "mcp",
-            "shared");
+            "customers", "catalog", "inventory", "cart", "orders", "payments", "mcp", "shared");
   }
 }
