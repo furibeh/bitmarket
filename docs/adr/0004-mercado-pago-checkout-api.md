@@ -1,7 +1,7 @@
 # ADR-0004: Mercado Pago Checkout API vía Orders API con tokenización en el navegador
 - Estado: Aceptado
 - Fecha: 2026-10-27
-- Revisado: 2026-10-28
+- Revisado: 2026-10-29
 
 ## Contexto
 La tienda cobra en Colombia con tarjeta (único medio del MVP), en sandbox. Queremos el formulario de pago dentro de la tienda para controlar el flujo (reintentos con otra tarjeta durante la reserva) y a la vez minimizar la superficie PCI: el backend no debe ver datos de tarjeta. Mercado Pago ofrece Checkout API sobre dos APIs: Payments (`/v1/payments`), que su referencia marca como *legacy*, y Orders (`/v1/orders`), recomendada para integraciones nuevas y disponible en Colombia.
@@ -19,5 +19,5 @@ Usamos Mercado Pago Checkout API vía Orders API: el navegador tokeniza la tarje
 
 ## Consecuencias
 - **Positivas:** superficie PCI baja (SAQ A-EP como referencia); flujo de reintento propio (ADR-0006).
-- **Negativas:** el backend gestiona estados intermedios de la orden (`created`, `processing`, `action_required`) y webhooks (ADR-0005); menos ejemplos que Payments; la búsqueda de órdenes no admite credenciales de prueba (AQ-02); dependencia del SDK de Mercado Pago en el frontend.
+- **Negativas:** el backend gestiona estados intermedios de la orden (`created`, `processing`, `action_required`) y webhooks (ADR-0005); menos ejemplos que Payments; dependencia del SDK de Mercado Pago en el frontend.
 - **Verificación:** test que crea la orden dos veces con la misma `X-Idempotency-Key` y obtiene una sola orden; revisión de que ningún endpoint ni log recibe PAN/CVV (solo `token`).

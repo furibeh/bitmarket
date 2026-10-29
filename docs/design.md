@@ -74,7 +74,7 @@ BitMarket es una tienda en línea de tecnología que vende productos con variant
   4. El comprador ve el pedido confirmado.
 - **Alternativos:**
   - A1. Respuesta `failed` o `canceled`: el intento pasa a `REJECTED` y el comprador puede reintentar con otra tarjeta mientras la reserva siga vigente (RN-64).
-  - A2. Respuesta `created`, `processing` o `action_required` (3DS, antifraude, procesamiento asíncrono): el intento pasa a `PENDING`, el pedido sigue en `PENDING_PAYMENT`, la reserva no expira mientras tanto (RN-33) y el estado final llega por webhook (CU-12) o por reconciliación (CU-14).
+  - A2. Respuesta `created`, `processing`, `action_required` o `in_review` (3DS, antifraude, revisión, procesamiento asíncrono): el intento pasa a `PENDING`, el pedido sigue en `PENDING_PAYMENT`, la reserva no expira mientras tanto (RN-33) y el estado final llega por webhook (CU-12) o por reconciliación (CU-14).
   - A3. `POST /v1/orders` agota el tiempo de espera: se reintenta con la misma clave de idempotencia (RN-62).
   - A4. La reserva ya expiró o el pedido no está en `PENDING_PAYMENT`: el sistema no crea el intento (RN-65).
   - A5. El pedido ya tiene un intento en curso: el sistema no crea otro (RN-69).
@@ -215,7 +215,7 @@ BitMarket es una tienda en línea de tecnología que vende productos con variant
 - **RN-38** Después de crear una variante (con su stock inicial), el stock solo cambia con ajustes delta (+/−) que llevan un motivo obligatorio y quedan registrados con el autor, tanto desde el panel como desde el MCP. Desde el panel no hace falta la confirmación en dos pasos.
 
 ### Identidad y datos personales
-- **RN-40** El perfil local se vincula al `sub` de Cognito. El backend no duplica las credenciales ni los datos que ya guarda Cognito. Única excepción: el almacén de sesiones del BFF guarda el correo y el nombre que Better Auth exige, en un esquema propio de Next.js que el backend no lee.
+- **RN-40** El perfil local se vincula al `sub` de Cognito. El backend no duplica las credenciales ni los datos que ya guarda Cognito. Única excepción: el almacén de sesiones del BFF guarda el correo y el nombre que Better Auth exige, en un esquema propio de Next.js que el backend no lee. Para cobrar, el BFF envía el correo de la sesión y el backend lo reenvía a Mercado Pago como pagador sin guardarlo ([ADR-0015](adr/0015-correo-del-pagador-desde-el-bff.md)).
 - **RN-41** No hay libreta de direcciones: la dirección se escribe en cada checkout y solo se guarda como copia en el pedido. Sus campos son destinatario, teléfono, departamento, ciudad y dirección, todos obligatorios, más indicaciones opcionales. Departamento y ciudad son texto libre.
 - **RN-42** Un comprador solo ve sus propios pedidos y su propio carrito.
 - **RN-43** El registro, la verificación de correo y la recuperación de contraseña los gestiona Cognito. BitMarket no envía correos transaccionales.
@@ -279,7 +279,7 @@ stateDiagram-v2
 ```mermaid
 stateDiagram-v2
     [*] --> CREATED: se guarda con su clave de idempotencia
-    CREATED --> PENDING: respuesta created / processing / action_required
+    CREATED --> PENDING: respuesta created / processing / action_required / in_review
     CREATED --> APPROVED: respuesta processed
     CREATED --> REJECTED: respuesta failed / canceled, 4xx de validación, o huérfano sin orden en MP
     PENDING --> APPROVED: webhook verificado o reconciliación
@@ -294,7 +294,7 @@ stateDiagram-v2
 | Estado interno | Estados de la orden de Mercado Pago | Notas |
 | --- | --- | --- |
 | `CREATED` | — | Guardado antes de `POST /v1/orders`, todavía sin respuesta definitiva (RN-61, RN-62). Cuenta como en curso. Impide que la reserva expire (RN-33). |
-| `PENDING` | `created`, `processing`, `action_required` | Cuenta como en curso. Impide que la reserva expire (RN-33). |
+| `PENDING` | `created`, `processing`, `action_required`, `in_review` | Cuenta como en curso. Impide que la reserva expire (RN-33). |
 | `APPROVED` | `processed` | Lleva el pedido a `PAID` y consume la reserva (RN-22). Solo puede haber uno por pedido (RN-64). |
 | `REJECTED` | `failed`, `canceled` | Final. Permite un nuevo intento si la reserva sigue vigente (RN-64). Un `processed` posterior no lo cambia y genera una alerta de cobro (RN-66). |
 | `REFUNDED` / `CHARGED_BACK` | `refunded`, `charged_back` | Solo se registran (RN-67). |
