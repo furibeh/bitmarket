@@ -50,7 +50,7 @@ Un comercio de tecnología en Colombia necesita vender en línea productos que s
 | Estados del pedido y del pago coherentes | Diagrama de estados en `design.md` y tests que rechazan transiciones inválidas. |
 | Módulos desacoplados | `ApplicationModules.verify()` en CI falla si un módulo usa internos de otro. |
 | CI que protege `main` | Un PR con un test roto no puede fusionarse. |
-| Desplegado en AWS | CI publica las imágenes en ECR; `terraform apply` levanta el entorno efímero, la URL de CloudFront permite una compra sandbox de punta a punta con cuentas de prueba de Mercado Pago, y `terraform destroy` lo elimina sin dejar recursos con costo. |
+| Desplegado en AWS | CI publica las imágenes en ECR; `terraform apply` levanta el entorno efímero, la URL de CloudFront permite una compra sandbox de punta a punta con las credenciales y tarjetas de prueba de Mercado Pago, y `terraform destroy` lo elimina sin dejar recursos con costo. |
 | MCP útil | Demo con un cliente MCP que responde las dos preguntas de ejemplo con datos reales y ejecuta la acción administrativa solo tras confirmación. |
 
 ## 6. Stack
@@ -87,7 +87,7 @@ Un comercio de tecnología en Colombia necesita vender en línea productos que s
 | Sobreventa por condiciones de carrera | Decremento atómico condicionado en base de datos y test de concurrencia en CI. |
 | Costo de AWS por olvidar el entorno encendido | Entorno efímero que se destruye solo al pasar de 4 horas (como máximo ~5 h), sin NAT Gateway y alertas de AWS Budgets. |
 | MCP ejecuta acciones no deseadas | Permisos, confirmación explícita y una sola acción de escritura en el MVP. |
-| Diferencias entre sandbox y producción de Mercado Pago | Uso de cuentas de prueba oficiales; aislar la integración en el módulo de pagos. |
+| Diferencias entre sandbox y producción de Mercado Pago | Uso del entorno de prueba oficial (credenciales y tarjetas de prueba); aislar la integración en el módulo de pagos. |
 
 ## 9. Criterios de éxito
 
