@@ -180,10 +180,10 @@ sequenceDiagram
     participant P as payments
     participant O as orders
     participant MP as Mercado Pago
-    FE->>P: POST /api/orders/{id}/payments (card token)
+    FE->>P: POST /api/orders/{id}/payments (card token, correo del comprador)
     P->>O: prepare(orderId, customerSub)  [tx 1]
     P->>P: guarda intento CREATED + X-Idempotency-Key  [tx 1]
-    P->>MP: POST /v1/orders (X-Idempotency-Key, external_reference = attemptId)
+    P->>MP: POST /v1/orders (X-Idempotency-Key, external_reference = attemptId, payer.email)
     alt timeout o 5xx
         P->>MP: hasta 3 reintentos con la misma clave y el mismo cuerpo
         Note over P: si se agotan, el intento queda CREATED<br/>y lo resuelve la reconciliación
@@ -386,7 +386,7 @@ erDiagram
 
 | Integración | Uso | Fallos y respuesta |
 | --- | --- | --- |
-| **Mercado Pago** `POST /v1/orders` | Crear una orden por intento (`processing_mode = automatic`, una transacción de pago) con token de tarjeta, `payer.email` (obligatorio; lo envía el BFF, ADR-0015), `X-Idempotency-Key` y `external_reference` = ID del intento (ambos UUID: la cabecera admite de 1 a 128 caracteres y `external_reference` hasta 64) | Timeouts de conexión y lectura explícitos y configurables. Timeout o 5xx → hasta **3 reintentos** con la **misma** clave y el **mismo** cuerpo (RN-62); 409 `idempotency_key_already_used` o 423 `resource_locked` en un reintento → no se reintenta más y el intento queda `CREATED` (AQ-03). 429 → esperar `Retry-After`. Sin respuesta definitiva tras los reintentos (o caída del proceso) → el intento queda `CREATED` y lo resuelve la reconciliación. 4xx de validación → `REJECTED` con el detalle. Un pago rechazado llega como **402** con la orden en el cuerpo (`status = failed`; el motivo en `transactions.payments[].status_detail`, p. ej. `rejected_by_issuer`): es una respuesta definitiva, no un error de validación → `REJECTED`, guardando `mp_order_id`. |
+| **Mercado Pago** `POST /v1/orders` | Crear una orden por intento (`processing_mode = automatic`, una transacción de pago) con token de tarjeta, `payer.email` (obligatorio; lo envía el BFF, ADR-0015), `X-Idempotency-Key` y `external_reference` = ID del intento (ambos UUID: la cabecera admite de 1 a 128 caracteres y `external_reference` hasta 64) | Timeouts de conexión y lectura explícitos y configurables. Timeout o 5xx → hasta **3 reintentos** con la **misma** clave y el **mismo** cuerpo (RN-62); 409 `idempotency_key_already_used` o 423 `resource_locked` en un reintento → no se reintenta más y el intento queda `CREATED` (AQ-03). 429 → esperar `Retry-After`. Sin respuesta definitiva tras los reintentos (o caída del proceso) → el intento queda `CREATED` y lo resuelve la reconciliación. 4xx de validación → `REJECTED` guardando solo el código del error (p. ej. `property_value`), **nunca el mensaje ni los `details` literales**, que pueden repetir el `payer.email` (ADR-0015). Un pago rechazado llega como **402** con la orden en el cuerpo (`status = failed`; el motivo en `transactions.payments[].status_detail`, p. ej. `rejected_by_issuer`): es una respuesta definitiva, no un error de validación → `REJECTED`, guardando `mp_order_id`. |
 | **Mercado Pago** `GET /v1/orders/{id}` | Estado real tras webhook y en reconciliación | Si falla en el webhook → responder 5xx para que Mercado Pago reintente; la reconciliación es el respaldo (RN-68). |
 | **Mercado Pago** búsqueda de órdenes `GET /v1/orders` por `external_reference` (con `begin_date`/`end_date` obligatorios) | Resolver intentos huérfanos en `CREATED` | Si existe la orden, se aplica su estado; si no existe, el intento pasa a `REJECTED` y deja de bloquear nuevos intentos. Si la búsqueda falla, se reintenta en la siguiente ejecución. |
 | **Mercado Pago** webhook | Notificación de cambio de orden (evento *Order (Mercado Pago)*, tópico `order`, configurado en el panel de la aplicación con URLs separadas para Prueba y Producción; la Orders API no admite `notification_url` por petición) | Verificación de `x-signature` (HMAC-SHA256 del manifiesto con `data.id` del query string **en minúsculas** (los IDs `ORD…` llegan en mayúsculas), `x-request-id` y `ts`, comparado en tiempo constante). Inválida → 4xx sin efectos (RN-63). El cuerpo solo aporta el ID de la orden. El intento se identifica por el `external_reference` de la respuesta de `GET /v1/orders/{id}`, no por `mp_order_id`, que un huérfano en `CREATED` todavía no tiene; si faltaba, se guarda. Si la API devuelve `processed` para un intento ya `REJECTED`, no hay transición y se llama a `onRejectedAttemptCharged` (RN-66). CloudFront reenvía `/webhooks/*` al ALB sin caché, con método `POST`, query string y las cabeceras `x-signature` y `x-request-id`. |
@@ -441,6 +441,8 @@ Implementados con `@Scheduled` de Spring; las consultas de bloqueo son `@Query(n
 - **Mercado Pago:** sandbox real con las **credenciales de prueba** de la aplicación (`APP_USR-…`, entorno *Prueba* del panel; AQ-02): `MERCADOPAGO_ACCESS_TOKEN` en el backend y `MERCADOPAGO_PUBLIC_KEY` en Next.js para el Brick. No hace falta activar el entorno de producción ni usar cuentas de prueba: en sandbox se acepta cualquier correo válido como `payer.email`. En local **no llegan webhooks**; los intentos `PENDING` se resuelven con el job de reconciliación (con un intervalo más corto configurable). El webhook se prueba con tests de integración y en AWS.
 
 ### 12.2 AWS
+
+- La *public key* de Mercado Pago (`MERCADOPAGO_PUBLIC_KEY`) no es secreta: no va en SSM. Es una variable de Terraform de la capa efímera (en CI, una *variable* de GitHub, no un secreto) que la definición de tarea de Next.js expone como variable de entorno normal. No lleva el prefijo `NEXT_PUBLIC_`: un componente de servidor la lee al renderizar la página de pago y se la entrega al Brick.
 
 | Capa | Recursos | Ciclo de vida |
 | --- | --- | --- |
