@@ -69,8 +69,8 @@ jobs:
         with:
           node-version-file: frontend/.nvmrc
       - run: terraform fmt -check -recursive
-      - run: terraform init -backend=false -input=false
+      - run: terraform init -backend=false -input=false -lockfile=readonly
       - run: terraform validate
       - name: Test Post Confirmation Lambda
         working-directory: infra/permanent/lambda/post-confirmation
-        run: node --test
+        run: node --test test/handler.test.mjs
