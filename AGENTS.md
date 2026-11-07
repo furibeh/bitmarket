@@ -9,7 +9,7 @@ Tienda en línea colombiana de tecnología: variantes con precio y stock propios
 - Si el plan supera ~400 líneas de producción, propón partir el issue.
 - Commits pequeños con Conventional Commits.
 - Nunca hagas push ni merge. Nunca hagas commit de secretos.
-- El workflow `ci` (`.github/workflows/ci.yml`, jobs `backend` y `frontend`) es el *required check* de `main`: un PR solo se fusiona con ambos en verde.
+- El workflow `ci` (`.github/workflows/ci.yml`, jobs `backend`, `frontend` e `infra`) es el *required check* de `main`: un PR solo se fusiona con todos en verde.
 - Si algo no está decidido en docs/, pregunta; no decidas en silencio.
 - Cita las reglas de negocio por su ID (`RN-xx`) y los casos de borde (`B-xx`) de `docs/design.md` en planes, tests y PR.
 - Una decisión de arquitectura nueva con alternativas reales requiere un ADR en `docs/adr/` (siguiente número, plantilla de los existentes).
@@ -36,6 +36,9 @@ Los marcados TODO todavía no existen.
 | Formato | backend `cd backend && ./mvnw spotless:apply` (google-java-format); frontend `cd frontend && pnpm format` (Prettier) |
 | Comprobar formato | backend `cd backend && ./mvnw spotless:check`; frontend `cd frontend && pnpm format:check` (ambos en CI) |
 | Typecheck frontend | `cd frontend && pnpm typecheck` (`next typegen` + `tsc --noEmit`) |
+| Tests de la Lambda *Post Confirmation* | `cd infra/permanent/lambda/post-confirmation && node --test` |
+| Comprobar Terraform | `cd infra/permanent && terraform fmt -check -recursive && terraform init -backend=false && terraform validate` (en CI) |
+| Aplicar la capa permanente | Ver "Capa permanente de AWS" en `README.md`; se aplica en local |
 | Migraciones | Flyway al arrancar el backend; nuevas en `backend/src/main/resources/db/migration/` |
 | Tipos API frontend | TODO regenerar desde OpenAPI con `openapi-typescript` |
 
