@@ -65,7 +65,7 @@ Un comercio de tecnología en Colombia necesita vender en línea productos que s
 | Identidad | Amazon Cognito (plan Essentials, Managed Login) | Delega la autenticación, la parte de mayor riesgo; un solo proveedor para la web, la API y el MCP. |
 | Tests | JUnit 6, Testcontainers, WireMock, Vitest, Playwright | Integración contra PostgreSQL real, no simulada; Mercado Pago simulado. |
 | CI | GitHub Actions | Integrado con el repositorio y los PRs. |
-| Despliegue | AWS con Terraform: capa permanente (Cognito y su Lambda de registro, ECR, S3, CloudFront, SSM, Budgets) y capa efímera (VPC, ECS Fargate, ALB interno como VPC origin de CloudFront, RDS), región `us-east-1` | Aprender y demostrar AWS pagando solo por horas encendidas; CloudFront da HTTPS y URLs estables sin dominio. |
+| Despliegue | AWS con Terraform: capa permanente (Cognito y su Lambda de registro, ECR, S3, CloudFront, SSM, Budgets) y capa efímera (VPC, ECS Fargate, ALB interno como VPC origin de CloudFront, RDS), región `us-east-2` | Aprender y demostrar AWS pagando solo por horas encendidas; CloudFront da HTTPS y URLs estables sin dominio. |
 | IA | Servidor MCP (Spring AI 2.0) | Expone tools tipadas; el lenguaje natural lo pone el cliente LLM. |
 
 ## 7. Reglas de negocio ya decididas

@@ -1,7 +1,7 @@
 # ADR-0010: Infraestructura AWS en dos capas con Terraform y ECS Fargate, entorno efímero
 - Estado: Aceptado
 - Fecha: 2026-10-27
-- Revisado: 2026-10-28
+- Revisado: 2026-10-28; la región y la autenticación por OIDC las sustituye [ADR-0016](0016-region-us-east-2-y-llaves-iam-en-ci.md) (2026-11-06)
 
 ## Contexto
 El brief exige desplegar en AWS y demostrarlo, pero pagando solo por horas encendidas; el mayor riesgo de costo es olvidar el entorno encendido. Las URLs de callback de Cognito y de webhook de Mercado Pago deben ser estables entre despliegues, sin dominio propio. App Runner está cerrado a clientes nuevos desde el 30-04-2026.

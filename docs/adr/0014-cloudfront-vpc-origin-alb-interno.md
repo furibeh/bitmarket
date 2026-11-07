@@ -3,7 +3,7 @@
 - Fecha: 2026-10-28
 
 ## Contexto
-CloudFront es la única entrada pública del sistema (ADR-0010). Con un ALB público restringido a la lista de prefijos administrada de CloudFront, cualquier distribución de CloudFront, incluida una de otra cuenta, puede llegar al ALB. Además, el ALB tiene IP pública y se descubre desde internet. Sin dominio propio no hay certificado para el ALB, así que el tramo CloudFront → ALB va por HTTP. Desde noviembre de 2024 CloudFront admite *VPC origins*: un ALB en subredes privadas al que CloudFront llega por una ENI gestionada, sin costo adicional, también en `us-east-1` (salvo la zona `use1-az3`).
+CloudFront es la única entrada pública del sistema (ADR-0010). Con un ALB público restringido a la lista de prefijos administrada de CloudFront, cualquier distribución de CloudFront, incluida una de otra cuenta, puede llegar al ALB. Además, el ALB tiene IP pública y se descubre desde internet. Sin dominio propio no hay certificado para el ALB, así que el tramo CloudFront → ALB va por HTTP. Desde noviembre de 2024 CloudFront admite *VPC origins*: un ALB en subredes privadas al que CloudFront llega por una ENI gestionada, sin costo adicional, también en `us-east-2`, la región del proyecto (ADR-0016).
 
 ## Decisión
 El ALB de la capa efímera es interno, en subredes privadas, y CloudFront llega a él como *VPC origin*. El recurso VPC origin se crea en la capa efímera junto al ALB. La capa permanente recibe su `vpc_origin_id` como origen de la distribución, y el security group del ALB solo acepta tráfico del grupo gestionado `CloudFront-VPCOrigins-Service-SG`. Las tareas Fargate siguen en subredes públicas con IP pública, porque no hay NAT.
