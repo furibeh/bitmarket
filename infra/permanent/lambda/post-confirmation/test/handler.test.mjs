@@ -16,7 +16,7 @@ function buildEvent(triggerSource) {
     callerContext: { awsSdkVersion: "test", clientId: "test-client" },
     request: {
       userAttributes: {
-        sub: "7f3c1a52-0000-4000-8000-000000000001",
+        sub: "9d2e4b71-0000-4000-8000-000000000002",
         email: EMAIL,
         email_verified: "true",
       },
@@ -35,6 +35,10 @@ function recordingCognito() {
   };
 }
 
+function serializeError(error) {
+  return JSON.stringify(error, Object.getOwnPropertyNames(error));
+}
+
 function captureConsole(t) {
   const mocks = CONSOLE_METHODS.map((method) =>
     t.mock.method(console, method, () => {}),
@@ -45,7 +49,7 @@ function captureConsole(t) {
       .flatMap((call) => call.arguments)
       .map((argument) =>
         argument instanceof Error
-          ? `${argument.message} ${argument.stack}`
+          ? serializeError(argument)
           : JSON.stringify(argument),
       )
       .join("\n");
@@ -115,7 +119,18 @@ test("Registro sin datos personales: no escribe el correo en los logs si Cognito
     },
   });
 
-  await handler(buildEvent("PostConfirmation_ConfirmSignUp")).catch(() => {});
+  let rejection;
+  await assert.rejects(
+    handler(buildEvent("PostConfirmation_ConfirmSignUp")),
+    (error) => {
+      rejection = error;
+      return true;
+    },
+  );
 
   assert.ok(!logged().includes(EMAIL), "the email reached the logs");
+  assert.ok(
+    !serializeError(rejection).includes(EMAIL),
+    "the email reached the propagated error, which the Lambda runtime logs",
+  );
 });
