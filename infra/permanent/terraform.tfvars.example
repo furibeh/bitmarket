@@ -1,0 +1,2 @@
+alert_email           = "tu-correo@example.com"
+cognito_domain_prefix = "bitmarket-tu-sufijo"
