@@ -446,7 +446,7 @@ Implementados con `@Scheduled` de Spring; las consultas de bloqueo son `@Query(n
 
 | Capa | Recursos | Ciclo de vida |
 | --- | --- | --- |
-| Permanente (`infra/permanent`) | Cognito User Pool y app clients (callback y *sign-out URLs* local y de CloudFront), Lambda *Post Confirmation* que añade al usuario al grupo `CUSTOMER` ([ADR-0013](adr/0013-grupo-customer-con-post-confirmation.md)), ECR (backend y frontend), S3 de imágenes, CloudFront, parámetros SSM, AWS Budgets, bucket S3 del estado de Terraform, usuario IAM de CI | Se crea y modifica en local y rara vez cambia; `env-up` y `env-down` la vuelven a aplicar desde CI solo para cambiar el origen de CloudFront. |
+| Permanente (`infra/permanent`) | Cognito User Pool y app clients (callback y *sign-out URLs* local y de CloudFront), Lambda *Post Confirmation* que añade al usuario al grupo `CUSTOMER` ([ADR-0013](adr/0013-grupo-customer-con-post-confirmation.md)), ECR (backend y frontend), S3 de imágenes, CloudFront, parámetros SSM, AWS Budgets, bucket S3 del estado de Terraform, usuarios IAM de CI | Se crea y modifica en local y rara vez cambia; `env-up` y `env-down` la vuelven a aplicar desde CI solo para cambiar el origen de CloudFront. |
 | Efímera (`infra/ephemeral`) | VPC (subredes públicas y privadas, sin NAT, con internet gateway), ALB interno y su *VPC origin* de CloudFront, ECS cluster y servicios Fargate (backend y Next.js), RDS PostgreSQL 17 `db.t4g.micro` | Se crea y destruye desde CI. |
 
 - El bucket del estado de Terraform se crea una vez con AWS CLI (comandos en `README.md`), fuera de Terraform, porque debe existir antes del primer `init`. El bloqueo usa `use_lockfile` de S3, sin DynamoDB.

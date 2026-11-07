@@ -1,4 +1,4 @@
-# ADR-0016: Región `us-east-2` y llaves de un usuario IAM en CI por las restricciones de la cuenta de AWS
+# ADR-0016: Región `us-east-2` y llaves de usuarios IAM en CI por las restricciones de la cuenta de AWS
 - Estado: Aceptado
 - Fecha: 2026-11-06
 

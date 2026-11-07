@@ -102,11 +102,12 @@ Mercado Pago y los datos semilla se documentarán en la guía de demo.
 
 Crea el User Pool de Cognito, su Lambda *Post Confirmation* y el presupuesto de AWS Budgets. Se aplica en local.
 
-Requisitos: Terraform 1.10 o superior, AWS CLI y credenciales de la cuenta de AWS con permisos para crear estos recursos. Los recursos van en `us-east-2` ([ADR-0016](docs/adr/0016-region-us-east-2-y-llaves-iam-en-ci.md)).
+Requisitos: Terraform 1.11 o superior, AWS CLI y credenciales de la cuenta de AWS con permisos para crear estos recursos. Los recursos van en `us-east-2` ([ADR-0016](docs/adr/0016-region-us-east-2-y-llaves-iam-en-ci.md)).
 
 1. Crea el bucket del estado de Terraform. Solo hace falta una vez por cuenta:
 
    ```sh
+   export AWS_REGION=us-east-2
    BUCKET="bitmarket-tfstate-$(aws sts get-caller-identity --query Account --output text)"
    aws s3api create-bucket --bucket "$BUCKET" --region us-east-2 --create-bucket-configuration LocationConstraint=us-east-2
    aws s3api put-bucket-versioning --bucket "$BUCKET" --versioning-configuration Status=Enabled
@@ -126,6 +127,7 @@ Requisitos: Terraform 1.10 o superior, AWS CLI y credenciales de la cuenta de AW
 3. Inicializa y aplica:
 
    ```sh
+   BUCKET="bitmarket-tfstate-$(aws sts get-caller-identity --query Account --output text)"
    terraform init -backend-config="bucket=$BUCKET"
    terraform apply
    ```
