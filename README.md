@@ -100,7 +100,7 @@ Mercado Pago y los datos semilla se documentarán en la guía de demo.
 
 ## Capa permanente de AWS
 
-Crea el User Pool de Cognito, su Lambda *Post Confirmation* y el presupuesto de AWS Budgets. Se aplica en local.
+Crea el User Pool de Cognito, su Lambda *Post Confirmation*, el presupuesto de AWS Budgets, los repositorios ECR y el usuario IAM que publica en ellos. Se aplica en local.
 
 Requisitos: Terraform 1.11 o superior, AWS CLI y credenciales de la cuenta de AWS con permisos para crear estos recursos. Los recursos van en `us-east-2` ([ADR-0016](docs/adr/0016-region-us-east-2-y-llaves-iam-en-ci.md)).
 
@@ -154,6 +154,30 @@ aws cognito-idp admin-add-user-to-group \
 ```
 
 El grupo aparece en el token a partir del siguiente inicio de sesión. El mismo comando con `--group-name CUSTOMER` sirve para un usuario que haya quedado sin ese grupo: uno creado con `admin-create-user`, o uno cuyo registro falló en la Lambda *Post Confirmation*. En ese caso queda confirmado y sin grupo, y repetir el código no lo arregla.
+
+### Llaves para publicar imágenes
+
+El workflow `images` publica en ECR con las llaves del usuario `bitmarket-ci-images`, guardadas en el Environment `aws-images`, que solo admite despliegues desde `main` ([ADR-0016](docs/adr/0016-region-us-east-2-y-llaves-iam-en-ci.md)). Hazlo después de aplicar la capa permanente y antes de fusionar el primer cambio que deba publicarse.
+
+1. Crea el Environment y limítalo a `main`. Solo hace falta una vez:
+
+   ```sh
+   gh api -X PUT repos/furibeh/bitmarket/environments/aws-images --input - <<'EOF'
+   {"deployment_branch_policy":{"protected_branches":false,"custom_branch_policies":true}}
+   EOF
+   gh api -X POST repos/furibeh/bitmarket/environments/aws-images/deployment-branch-policies -f name=main -f type=branch
+   ```
+
+2. Crea las llaves y guárdalas sin mostrarlas en pantalla:
+
+   ```sh
+   read -r KEY_ID SECRET_KEY <<<"$(aws iam create-access-key --user-name bitmarket-ci-images --query 'AccessKey.[AccessKeyId,SecretAccessKey]' --output text)"
+   gh secret set AWS_ACCESS_KEY_ID --env aws-images --body "$KEY_ID"
+   gh secret set AWS_SECRET_ACCESS_KEY --env aws-images --body "$SECRET_KEY"
+   unset KEY_ID SECRET_KEY
+   ```
+
+Para rotarlas, repite el paso 2 y borra la llave anterior con `aws iam delete-access-key --user-name bitmarket-ci-images --access-key-id <id>`. Un usuario IAM admite dos llaves a la vez. Si ya tiene dos, borra primero la que no esté en uso.
 
 ## Cómo probar
 
