@@ -9,7 +9,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 FROM pnpm AS build
 RUN pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm build
+RUN pnpm build && rm -rf .next/cache
 
 FROM pnpm AS production-deps
 RUN pnpm install --frozen-lockfile --prod
@@ -17,7 +17,7 @@ RUN pnpm install --frozen-lockfile --prod
 FROM base
 ENV NODE_ENV=production
 COPY --from=production-deps /app/node_modules ./node_modules
-COPY --from=build /app/.next ./.next
+COPY --from=build --chown=node:node /app/.next ./.next
 COPY --from=build /app/next.config.ts /app/package.json ./
 USER node
 EXPOSE 3000
