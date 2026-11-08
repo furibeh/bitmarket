@@ -18,3 +18,11 @@ output "cognito_local_client_secret" {
   value     = aws_cognito_user_pool_client.local.client_secret
   sensitive = true
 }
+
+output "ecr_repository_urls" {
+  value = { for name, repository in aws_ecr_repository.images : name => repository.repository_url }
+}
+
+output "ci_images_user_name" {
+  value = aws_iam_user.ci_images.name
+}
