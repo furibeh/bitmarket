@@ -40,6 +40,7 @@ Los marcados TODO todavía no existen.
 | Comprobar Terraform | `cd infra/permanent && terraform fmt -check -recursive && terraform init -backend=false && terraform validate` (en CI) |
 | Aplicar la capa permanente | Ver "Capa permanente de AWS" en `README.md`; se aplica en local |
 | Migraciones | Flyway al arrancar el backend; nuevas en `backend/src/main/resources/db/migration/` |
+| Tablas de sesión (esquema `bff`) | `cd frontend && pnpm auth:migrate` (Better Auth; después de arrancar el backend) |
 | Tipos API frontend | TODO regenerar desde OpenAPI con `openapi-typescript` |
 
 ## Arquitectura
