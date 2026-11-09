@@ -61,10 +61,12 @@ Requisitos: Java 25, Node 24 (ver `frontend/.nvmrc`), pnpm 12.11.2 (la versión 
    cd backend && ./mvnw spring-boot:run
    ```
 
-3. En otra terminal, arranca el frontend:
+   Flyway también crea el esquema `bff` y el rol `bitmarket_bff`, así que el backend debe arrancar antes que el frontend.
+
+3. En otra terminal, crea `frontend/.env` como se explica en [Configurar la sesión](#configurar-la-sesión), migra las tablas de sesión y arranca el frontend:
 
    ```sh
-   cd frontend && pnpm install && pnpm dev
+   cd frontend && pnpm install && pnpm auth:migrate && pnpm dev
    ```
 
 4. Abre `http://localhost:3000`.
@@ -79,6 +81,7 @@ Compose y el backend leen estas variables de entorno:
 | `DB_USER` | `bitmarket` | Compose y backend |
 | `DB_PASSWORD` | `bitmarket` | Compose y backend |
 | `DB_URL` | `jdbc:postgresql://localhost:5432/${DB_NAME}` | Solo el backend |
+| `BFF_DB_PASSWORD` | `bitmarket_bff` | Solo el backend |
 
 `DB_URL` toma `DB_NAME`, así que solo hace falta definirla para conectar el backend a otro PostgreSQL (otro host o puerto); el contenedor de `compose.yaml` publica siempre el puerto 5432.
 
@@ -95,6 +98,25 @@ La imagen de PostgreSQL solo aplica `DB_NAME`, `DB_USER` y `DB_PASSWORD` al inic
 ```sh
 docker compose down -v && docker compose up -d
 ```
+
+`BFF_DB_PASSWORD` es la contraseña del rol `bitmarket_bff`, y Flyway la escribe literalmente en el SQL, así que no puede contener comillas simples. Solo se aplica la primera vez que corre la migración: para cambiarla después, recrea el volumen.
+
+### Configurar la sesión
+
+Next.js lee estas variables de `frontend/.env`, ignorado por Git. `pnpm auth:migrate` solo lee ese archivo, no `.env.local`. Antes necesitas la [capa permanente de AWS](#capa-permanente-de-aws) aplicada.
+
+| Variable | Valor |
+| --- | --- |
+| `BFF_DATABASE_URL` | `postgres://bitmarket_bff:<BFF_DB_PASSWORD>@localhost:5432/<DB_NAME>` |
+| `BETTER_AUTH_SECRET` | Una cadena aleatoria, por ejemplo la salida de `openssl rand -base64 32` |
+| `BETTER_AUTH_URL` | `http://localhost:3000` |
+| `COGNITO_CLIENT_ID` | `terraform output -raw cognito_local_client_id` |
+| `COGNITO_CLIENT_SECRET` | `terraform output -raw cognito_local_client_secret` |
+| `COGNITO_DOMAIN` | `terraform output -raw cognito_domain_url` |
+| `COGNITO_REGION` | `us-east-2` |
+| `COGNITO_USER_POOL_ID` | `terraform output -raw cognito_user_pool_id` |
+
+`pnpm auth:migrate` crea las tablas de Better Auth en el esquema `bff` y se puede repetir sin problema.
 
 Mercado Pago y los datos semilla se documentarán en la guía de demo.
 
