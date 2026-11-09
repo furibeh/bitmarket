@@ -39,7 +39,7 @@ Los marcados TODO todavía no existen.
 | Tests de la Lambda *Post Confirmation* | `cd infra/permanent/lambda/post-confirmation && node --test` |
 | Comprobar Terraform | En `infra/permanent` y en `infra/ephemeral`: `terraform fmt -check -recursive && terraform init -backend=false && terraform validate` (en CI) |
 | Aplicar la capa permanente | Ver "Capa permanente de AWS" en `README.md`; se aplica en local |
-| Levantar y destruir la capa efímera | `gh workflow run env-up --ref main` y `gh workflow run env-down --ref main`; preparación y ensayo en "Capa efímera de AWS" en `README.md` |
+| Levantar y destruir la capa efímera | `gh workflow run env-up --ref main -f image_tag=<sha>` y `gh workflow run env-down --ref main`; preparación y ensayo en "Capa efímera de AWS" en `README.md` |
 | Migraciones | Flyway al arrancar el backend; nuevas en `backend/src/main/resources/db/migration/` |
 | Tablas de sesión (esquema `bff`) | `cd frontend && pnpm auth:migrate` (Better Auth; después de arrancar el backend) |
 | Tipos API frontend | TODO regenerar desde OpenAPI con `openapi-typescript` |

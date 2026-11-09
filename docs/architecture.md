@@ -454,6 +454,7 @@ Implementados con `@Scheduled` de Spring; las consultas de bloqueo son `@Query(n
 - Al arrancar, el backend ejecuta las migraciones de Flyway y carga datos semilla: el entorno efímero no conserva datos entre `apply`.
 - Al arrancar, el contenedor de Next.js ejecuta las migraciones de Better Auth con el rol `bitmarket_bff` antes de `next start`, reintentando hasta que exista el esquema `bff`. Las migraciones son idempotentes; el servicio corre con una sola tarea en el MVP, así que no hay carreras entre réplicas. Las sesiones se pierden con cada `apply`, igual que los datos.
 - La capa efímera etiqueta sus recursos con `bitmarket:created-at`. Repetir `env-up` conserva el valor original.
+- Terraform crea los parámetros SSM con el argumento de solo escritura `value_wo` y un valor *placeholder*; el valor real se carga con `aws ssm put-parameter --overwrite`. Así no entra en el estado de ninguna capa: la efímera construye el ARN del parámetro y no lee su valor.
 
 ### 12.3 CI/CD (GitHub Actions)
 
