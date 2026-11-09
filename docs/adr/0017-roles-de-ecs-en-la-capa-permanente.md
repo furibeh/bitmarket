@@ -8,6 +8,8 @@ Los workflows `env-up` y `env-down` se autentican con llaves de larga duración 
 ## Decisión
 Los roles de ejecución y de tarea de ECS se definen en la capa permanente, que se aplica en local. El usuario `bitmarket-ci-deploy` no tiene ningún permiso de escritura en IAM: solo recibe `iam:PassRole` sobre esos dos roles.
 
+Sobre EC2 y RDS, el usuario se limita por acción y región, no por recurso, porque la cuenta solo aloja este proyecto y limitar por ARN o por etiqueta complica una política que hay que ensayar en cada cambio.
+
 ## Alternativas consideradas
 | Alternativa | Ventajas | Desventajas |
 | --- | --- | --- |
@@ -17,5 +19,5 @@ Los roles de ejecución y de tarea de ECS se definen en la capa permanente, que 
 
 ## Consecuencias
 - **Positivas:** una filtración de las llaves de despliegue no permite escalar privilegios mediante IAM. Queda acotado el riesgo que ADR-0016 acepta.
-- **Negativas:** los roles sobreviven a `env-down`, y `infra/ephemeral` debe referenciarlos por nombre. Los *service-linked roles* de ECS y del balanceador deben existir antes del primer `env-up` que los necesite, porque este usuario no puede crearlos.
+- **Negativas:** los roles sobreviven a `env-down`, y `infra/ephemeral` debe referenciarlos por nombre. Los *service-linked roles* de ECS y del balanceador deben existir antes del primer `env-up` que los necesite, porque este usuario no puede crearlos. Una filtración de las llaves permite modificar o borrar cualquier VPC o instancia RDS de `us-east-2`; si la cuenta llega a alojar otros proyectos, hay que limitar esos permisos por recurso.
 - **Verificación:** `aws iam simulate-principal-policy` sobre `bitmarket-ci-deploy` responde `implicitDeny` para `iam:CreateRole` e `iam:PutUserPolicy`.

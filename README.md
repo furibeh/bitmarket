@@ -263,7 +263,13 @@ La capa efímera se crea y destruye desde CI. La excepción es este ensayo, que 
    ```sh
    cd infra/ephemeral
    terraform init -backend-config="bucket=bitmarket-tfstate-$(aws sts get-caller-identity --query Account --output text)"
-   export TF_VAR_created_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+   outputs=$(terraform output -json)
+   created_at=$(jq -r '.created_at.value // empty' <<<"$outputs")
+   if [ -z "$created_at" ]; then
+     created_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+   fi
+   export TF_VAR_created_at="$created_at"
+   echo "$TF_VAR_created_at"
    terraform apply
    ```
 
@@ -275,11 +281,17 @@ La capa efímera se crea y destruye desde CI. La excepción es este ensayo, que 
    aws ec2 describe-nat-gateways --filter Name=vpc-id,Values="$(terraform output -raw vpc_id)" --query 'length(NatGateways)'
    ```
 
-4. Comprueba que los recursos llevan la etiqueta y que repetir el `plan` con la fecha guardada responde `No changes`:
+4. Comprueba los recursos etiquetados. El primer comando debe contar como mínimo 1 `db`, 1 `internet-gateway`, 2 `route-table`, 1 `security-group`, 1 `subgrp`, 4 `subnet` y 1 `vpc`; puede aparecer además un `secret`. Después, repite la resolución de la fecha: debe mostrar la misma del paso 2, y el `plan` debe responder `No changes`:
 
    ```sh
-   aws resourcegroupstaggingapi get-resources --tag-filters Key=bitmarket:created-at --query 'ResourceTagMappingList[].ResourceARN' --output text | tr '\t' '\n'
-   export TF_VAR_created_at="$(terraform output -raw created_at)"
+   aws resourcegroupstaggingapi get-resources --tag-filters Key=bitmarket:created-at --query 'ResourceTagMappingList[].ResourceARN' --output text | tr '\t' '\n' | sed -E 's/^arn:aws:[^:]+:[^:]*:[^:]*:([^:/]+).*/\1/' | sort | uniq -c
+   outputs=$(terraform output -json)
+   created_at=$(jq -r '.created_at.value // empty' <<<"$outputs")
+   if [ -z "$created_at" ]; then
+     created_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+   fi
+   export TF_VAR_created_at="$created_at"
+   echo "$TF_VAR_created_at"
    terraform plan
    ```
 
@@ -307,6 +319,12 @@ Los workflows solo se pueden lanzar cuando ya están en `main`:
 gh workflow run env-up --ref main
 gh workflow run env-down --ref main
 gh run list --workflow env-up --limit 1
+```
+
+Si un workflow se interrumpe (tiempo agotado o cancelación manual), el estado puede quedar bloqueado y el siguiente `env-up` o `env-down` fallará con `Error acquiring the state lock`. Comprueba que no haya otra ejecución en curso y libera el bloqueo con el `ID` que muestra ese error, desde `infra/ephemeral` y con el backend inicializado como en el ensayo:
+
+```sh
+terraform force-unlock <ID>
 ```
 
 ## Cómo probar
