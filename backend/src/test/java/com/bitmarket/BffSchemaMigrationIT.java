@@ -21,8 +21,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
-@SpringBootTest(
-    properties = "spring.flyway.placeholders.bff_password=" + BffSchemaMigrationIT.BFF_PASSWORD)
+@SpringBootTest(properties = "BFF_DB_PASSWORD=" + BffSchemaMigrationIT.BFF_PASSWORD)
 @Import(TestcontainersConfiguration.class)
 class BffSchemaMigrationIT {
 

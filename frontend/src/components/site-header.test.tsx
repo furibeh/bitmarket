@@ -74,4 +74,21 @@ describe("cabecera de la tienda", () => {
     expect(logged).toHaveBeenCalled();
     expect(JSON.stringify(logged.mock.calls.map(String))).not.toContain(EMAIL);
   });
+
+  test("si falla la consulta de sesión registra en JSON el tipo de fallo", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.getSession.mockRejectedValue(
+      Object.assign(new TypeError("connection refused"), {
+        code: "ECONNREFUSED",
+      }),
+    );
+
+    render(await SiteHeader());
+
+    expect(JSON.parse(String(logged.mock.calls[0][0]))).toMatchObject({
+      level: "error",
+      errorName: "TypeError",
+      errorCode: "ECONNREFUSED",
+    });
+  });
 });

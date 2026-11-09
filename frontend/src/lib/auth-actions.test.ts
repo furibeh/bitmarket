@@ -98,10 +98,10 @@ describe("cerrar sesión", () => {
     );
   });
 
-  test("si invalidar la sesión falla de forma inesperada, propaga el error y no redirige", async () => {
-    mocks.signOutApi.mockRejectedValue(new Error("database unavailable"));
+  test("si Better Auth lanza un error, lo propaga y no redirige", async () => {
+    mocks.signOutApi.mockRejectedValue(new Error("auth not initialized"));
 
-    await expect(signOut()).rejects.toThrow("database unavailable");
+    await expect(signOut()).rejects.toThrow("auth not initialized");
     expect(mocks.redirect).not.toHaveBeenCalled();
   });
 });
