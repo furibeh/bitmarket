@@ -6,7 +6,8 @@ locals {
 }
 
 # The access keys are created outside Terraform so they never reach its state
-# (ADR-0016). This user has no IAM write permissions (ADR-0017).
+# (ADR-0016). This user has no IAM write permissions, only iam:PassRole on the
+# two ECS roles (ADR-0017).
 resource "aws_iam_user" "ci_deploy" {
   name = "bitmarket-ci-deploy"
 }
@@ -89,6 +90,88 @@ data "aws_iam_policy_document" "ci_deploy" {
     sid       = "DescribeDefaultEncryptionKeys"
     actions   = ["kms:DescribeKey"]
     resources = ["*"]
+  }
+
+  statement {
+    sid = "ManageContainers"
+    actions = [
+      "ecs:CreateCluster",
+      "ecs:CreateService",
+      "ecs:DeleteCluster",
+      "ecs:DeleteService",
+      "ecs:DeleteTaskDefinitions",
+      "ecs:DeregisterTaskDefinition",
+      "ecs:DescribeClusters",
+      "ecs:DescribeServiceDeployments",
+      "ecs:DescribeServices",
+      "ecs:DescribeTaskDefinition",
+      "ecs:ListServiceDeployments",
+      "ecs:ListTagsForResource",
+      "ecs:ListTaskDefinitions",
+      "ecs:RegisterTaskDefinition",
+      "ecs:TagResource",
+      "ecs:UntagResource",
+      "ecs:UpdateService",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid = "ManageLoadBalancer"
+    actions = [
+      "elasticloadbalancing:AddTags",
+      "elasticloadbalancing:CreateListener",
+      "elasticloadbalancing:CreateLoadBalancer",
+      "elasticloadbalancing:CreateRule",
+      "elasticloadbalancing:CreateTargetGroup",
+      "elasticloadbalancing:DeleteListener",
+      "elasticloadbalancing:DeleteLoadBalancer",
+      "elasticloadbalancing:DeleteRule",
+      "elasticloadbalancing:DeleteTargetGroup",
+      "elasticloadbalancing:Describe*",
+      "elasticloadbalancing:ModifyListener",
+      "elasticloadbalancing:ModifyLoadBalancerAttributes",
+      "elasticloadbalancing:ModifyRule",
+      "elasticloadbalancing:ModifyTargetGroup",
+      "elasticloadbalancing:ModifyTargetGroupAttributes",
+      "elasticloadbalancing:RemoveTags",
+      "elasticloadbalancing:SetSecurityGroups",
+      "elasticloadbalancing:SetSubnets",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid = "ManageLogGroups"
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:DeleteLogGroup",
+      "logs:DeleteRetentionPolicy",
+      "logs:DescribeLogGroups",
+      "logs:ListTagsForResource",
+      "logs:PutRetentionPolicy",
+      "logs:TagResource",
+      "logs:UntagResource",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid       = "CheckBackendImage"
+    actions   = ["ecr:DescribeImages"]
+    resources = [aws_ecr_repository.images["backend"].arn]
+  }
+
+  statement {
+    sid       = "PassEcsRoles"
+    actions   = ["iam:PassRole"]
+    resources = [aws_iam_role.ecs_execution.arn, aws_iam_role.ecs_task.arn]
+
+    condition {
+      test     = "StringEquals"
+      variable = "iam:PassedToService"
+      values   = ["ecs-tasks.amazonaws.com"]
+    }
   }
 
   statement {
