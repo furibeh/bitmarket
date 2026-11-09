@@ -122,7 +122,7 @@ Mercado Pago y los datos semilla se documentarán en la guía de demo.
 
 ## Capa permanente de AWS
 
-Crea el User Pool de Cognito, su Lambda *Post Confirmation*, el presupuesto de AWS Budgets, los repositorios ECR y el usuario IAM que publica en ellos. Se aplica en local.
+Crea el User Pool de Cognito, su Lambda *Post Confirmation*, el presupuesto de AWS Budgets, los repositorios ECR, el usuario IAM que publica en ellos y el usuario IAM que despliega la capa efímera. Se aplica en local.
 
 Requisitos: Terraform 1.11 o superior, AWS CLI y credenciales de la cuenta de AWS con permisos para crear estos recursos. Los recursos van en `us-east-2` ([ADR-0016](docs/adr/0016-region-us-east-2-y-llaves-iam-en-ci.md)).
 
@@ -201,6 +201,114 @@ El workflow `images` publica en ECR con las llaves del usuario `bitmarket-ci-ima
 
 Para rotarlas, repite el paso 2 y borra la llave anterior con `aws iam delete-access-key --user-name bitmarket-ci-images --access-key-id <id>`. Un usuario IAM admite dos llaves a la vez. Si ya tiene dos, borra primero la que no esté en uso.
 
+## Capa efímera de AWS
+
+Los workflows `env-up` y `env-down` crean y destruyen la red y la base de datos del entorno. Cada `env-up` necesita su `env-down`: todavía no hay nada que destruya el entorno automáticamente, y RDS cobra por hora.
+
+### Preparar el usuario de despliegue
+
+Hazlo una vez, desde la raíz del repositorio, con tus credenciales de administrador.
+
+1. Aplica la capa permanente. El plan debe añadir solo el usuario `bitmarket-ci-deploy`, su política y la asociación entre ambos:
+
+   ```sh
+   terraform -chdir=infra/permanent plan
+   terraform -chdir=infra/permanent apply
+   ```
+
+2. Comprueba sus permisos. `rds:CreateDBInstance` debe salir `allowed`; `iam:CreateRole` e `iam:PutUserPolicy`, `implicitDeny`:
+
+   ```sh
+   aws iam simulate-principal-policy \
+     --policy-source-arn "$(aws iam get-user --user-name bitmarket-ci-deploy --query User.Arn --output text)" \
+     --action-names rds:CreateDBInstance iam:CreateRole iam:PutUserPolicy \
+     --context-entries ContextKeyName=aws:RequestedRegion,ContextKeyValues=us-east-2,ContextKeyType=string \
+     --query 'EvaluationResults[].[EvalActionName,EvalDecision]' --output table --no-cli-pager
+   ```
+
+3. Crea el Environment y limítalo a `main`. El último comando debe mostrar solo `main`:
+
+   ```sh
+   gh api -X PUT repos/furibeh/bitmarket/environments/aws-deploy --input - <<'EOF'
+   {"deployment_branch_policy":{"protected_branches":false,"custom_branch_policies":true}}
+   EOF
+   gh api -X POST repos/furibeh/bitmarket/environments/aws-deploy/deployment-branch-policies -f name=main -f type=branch
+   gh api repos/furibeh/bitmarket/environments/aws-deploy/deployment-branch-policies --jq '.branch_policies[].name'
+   ```
+
+4. Crea las llaves y guárdalas sin mostrarlas en pantalla. Si vas a hacer el ensayo, no cierres esta terminal, porque usa `KEY_ID` y `SECRET_KEY`. Si no, ejecuta después `unset KEY_ID SECRET_KEY`:
+
+   ```sh
+   read -r KEY_ID SECRET_KEY <<<"$(aws iam create-access-key --user-name bitmarket-ci-deploy --query 'AccessKey.[AccessKeyId,SecretAccessKey]' --output text)"
+   gh secret set AWS_ACCESS_KEY_ID --env aws-deploy --body "$KEY_ID"
+   gh secret set AWS_SECRET_ACCESS_KEY --env aws-deploy --body "$SECRET_KEY"
+   gh secret list --env aws-deploy
+   ```
+
+Para rotarlas, sigue el procedimiento de `bitmarket-ci-images` con este usuario y este Environment.
+
+### Ensayar en local
+
+La capa efímera se crea y destruye desde CI. La excepción es este ensayo, que comprueba los permisos con las llaves de despliegue antes de abrir un PR que cambie la capa, porque un workflow nuevo no se puede lanzar hasta que está en `main`. Termina siempre con `terraform destroy`.
+
+1. Desde la terminal del paso 4, abre una sola vez un shell con las llaves de despliegue: dentro de él `KEY_ID` y `SECRET_KEY` ya no existen. Espera unos segundos a que la llave nueva esté activa. El último comando debe mostrar `user/bitmarket-ci-deploy`:
+
+   ```sh
+   env -u AWS_PROFILE -u AWS_SESSION_TOKEN AWS_ACCESS_KEY_ID="$KEY_ID" AWS_SECRET_ACCESS_KEY="$SECRET_KEY" AWS_REGION=us-east-2 AWS_PAGER= "$SHELL"
+   aws sts get-caller-identity --query Arn --output text
+   ```
+
+2. Crea el entorno. RDS tarda varios minutos:
+
+   ```sh
+   cd infra/ephemeral
+   terraform init -backend-config="bucket=bitmarket-tfstate-$(aws sts get-caller-identity --query Account --output text)"
+   export TF_VAR_created_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+   terraform apply
+   ```
+
+3. Comprueba la base de datos: PostgreSQL 17.x, `db.t4g.micro`, `Public` en `false` y un `Secret` en estado `active`. Después, las subredes (`4`) y los NAT Gateway (`0`):
+
+   ```sh
+   aws rds describe-db-instances --db-instance-identifier bitmarket --query 'DBInstances[0].{Version:EngineVersion,Class:DBInstanceClass,Public:PubliclyAccessible,Secret:MasterUserSecret.SecretStatus}'
+   aws ec2 describe-subnets --filters Name=vpc-id,Values="$(terraform output -raw vpc_id)" --query 'length(Subnets)'
+   aws ec2 describe-nat-gateways --filter Name=vpc-id,Values="$(terraform output -raw vpc_id)" --query 'length(NatGateways)'
+   ```
+
+4. Comprueba que los recursos llevan la etiqueta y que repetir el `plan` con la fecha guardada responde `No changes`:
+
+   ```sh
+   aws resourcegroupstaggingapi get-resources --tag-filters Key=bitmarket:created-at --query 'ResourceTagMappingList[].ResourceARN' --output text | tr '\t' '\n'
+   export TF_VAR_created_at="$(terraform output -raw created_at)"
+   terraform plan
+   ```
+
+5. Destruye el entorno:
+
+   ```sh
+   terraform destroy
+   exit
+   ```
+
+6. De vuelta en tu terminal, con tus credenciales, borra las variables y comprueba que no quedó ningún snapshot (`0`):
+
+   ```sh
+   unset KEY_ID SECRET_KEY
+   aws rds describe-db-snapshots --db-instance-identifier bitmarket --region us-east-2 --query 'length(DBSnapshots)' --no-cli-pager
+   ```
+
+Si un permiso falla, añádelo a `infra/permanent/iam_ci_deploy.tf`, aplica la capa permanente y repite el paso que falló.
+
+### Levantar y destruir el entorno
+
+Los workflows solo se pueden lanzar cuando ya están en `main`:
+
+```sh
+gh workflow run env-up --ref main
+gh workflow run env-down --ref main
+gh run list --workflow env-up --limit 1
+```
+
 ## Cómo probar
 
 Cada línea se ejecuta desde la raíz del repositorio.
@@ -226,6 +334,8 @@ Infraestructura:
 ```sh
 cd infra/permanent && terraform fmt -check -recursive
 cd infra/permanent && terraform init -backend=false && terraform validate
+cd infra/ephemeral && terraform fmt -check -recursive
+cd infra/ephemeral && terraform init -backend=false && terraform validate
 cd infra/permanent/lambda/post-confirmation && node --test
 ```
 
