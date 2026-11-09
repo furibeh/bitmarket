@@ -10,10 +10,18 @@ async function currentUserEmail(): Promise<string | null> {
   try {
     const session = await auth.api.getSession({ headers: requestHeaders });
     return session?.user.email ?? null;
-  } catch {
-    // A broken session store must not take the public catalog down. The cause
-    // is not logged because it may repeat the customer's email.
-    console.error("Failed to load the session");
+  } catch (error) {
+    // A broken session store must not take the public catalog down. Only the
+    // error type is logged because the message may repeat the customer's email.
+    const { name, code } = Object(error) as { name?: string; code?: unknown };
+    console.error(
+      JSON.stringify({
+        level: "error",
+        message: "Failed to load the session",
+        errorName: name,
+        errorCode: code,
+      }),
+    );
     return null;
   }
 }
