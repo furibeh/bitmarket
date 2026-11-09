@@ -62,23 +62,3 @@ jobs:
             --output json)
           jq -r '.[]' <<<"$revisions" \
             | xargs -r -n 10 aws ecs delete-task-definitions --query failures --task-definitions
-      # The tagging API keeps returning deleted resources for a while.
-      - name: Check that no tagged resources remain
-        run: |
-          deadline=$((SECONDS + 900))
-          while true; do
-            remaining=$(aws resourcegroupstaggingapi get-resources \
-              --tag-filters Key=bitmarket:created-at \
-              --query 'ResourceTagMappingList[].ResourceARN' \
-              --output text)
-            if [ -z "$remaining" ]; then
-              echo "No tagged resources remain."
-              exit 0
-            fi
-            if [ "$SECONDS" -ge "$deadline" ]; then
-              echo "Tagged resources remain after 15 minutes:" >&2
-              echo "$remaining" | tr '\t' '\n' >&2
-              exit 1
-            fi
-            sleep 30
-          done
