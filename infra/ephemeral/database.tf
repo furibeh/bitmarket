@@ -3,8 +3,6 @@ resource "aws_db_subnet_group" "main" {
   subnet_ids = aws_subnet.private[*].id
 }
 
-# No rules yet: traffic from the backend tasks is allowed together with the
-# service that needs it.
 resource "aws_security_group" "database" {
   name        = "bitmarket-database"
   description = "PostgreSQL access to the RDS instance"
@@ -13,6 +11,14 @@ resource "aws_security_group" "database" {
   tags = {
     Name = "bitmarket-database"
   }
+}
+
+resource "aws_vpc_security_group_ingress_rule" "database_from_backend" {
+  security_group_id            = aws_security_group.database.id
+  referenced_security_group_id = aws_security_group.backend.id
+  ip_protocol                  = "tcp"
+  from_port                    = aws_db_instance.main.port
+  to_port                      = aws_db_instance.main.port
 }
 
 resource "aws_db_instance" "main" {

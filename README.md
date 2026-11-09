@@ -122,7 +122,7 @@ Mercado Pago y los datos semilla se documentarán en la guía de demo.
 
 ## Capa permanente de AWS
 
-Crea el User Pool de Cognito, su Lambda *Post Confirmation*, el presupuesto de AWS Budgets, los repositorios ECR, el usuario IAM que publica en ellos y el usuario IAM que despliega la capa efímera. Se aplica en local.
+Crea el User Pool de Cognito, su Lambda *Post Confirmation*, el presupuesto de AWS Budgets, los repositorios ECR, el usuario IAM que publica en ellos, el usuario IAM que despliega la capa efímera, los roles de ECS y los parámetros SSM con los secretos del backend. Se aplica en local.
 
 Requisitos: Terraform 1.11 o superior, AWS CLI y credenciales de la cuenta de AWS con permisos para crear estos recursos. Los recursos van en `us-east-2` ([ADR-0016](docs/adr/0016-region-us-east-2-y-llaves-iam-en-ci.md)).
 
@@ -203,27 +203,35 @@ Para rotarlas, repite el paso 2 y borra la llave anterior con `aws iam delete-ac
 
 ## Capa efímera de AWS
 
-Los workflows `env-up` y `env-down` crean y destruyen la red y la base de datos del entorno. Cada `env-up` necesita su `env-down`: todavía no hay nada que destruya el entorno automáticamente, y RDS cobra por hora.
+Los workflows `env-up` y `env-down` crean y destruyen la red, la base de datos, el balanceador interno y el backend en Fargate. Cada `env-up` necesita su `env-down`: todavía no hay nada que destruya el entorno automáticamente, y RDS cobra por hora.
 
 ### Preparar el usuario de despliegue
 
 Hazlo una vez, desde la raíz del repositorio, con tus credenciales de administrador.
 
-1. Aplica la capa permanente. El plan debe añadir solo el usuario `bitmarket-ci-deploy`, su política y la asociación entre ambos:
+1. Aplica la capa permanente. Crea el usuario `bitmarket-ci-deploy` y su política, los roles `bitmarket-ecs-execution` y `bitmarket-ecs-task` y los parámetros SSM con un valor *placeholder*:
 
    ```sh
    terraform -chdir=infra/permanent plan
    terraform -chdir=infra/permanent apply
    ```
 
-2. Comprueba sus permisos. `rds:CreateDBInstance` debe salir `allowed`; `iam:CreateRole` e `iam:PutUserPolicy`, `implicitDeny`:
+2. Comprueba sus permisos. En la primera tabla, `rds:CreateDBInstance`, `ecs:CreateService` y `elasticloadbalancing:CreateLoadBalancer` deben salir `allowed`; `iam:CreateRole` e `iam:PutUserPolicy`, `implicitDeny`. En la segunda, `iam:PassRole` debe salir `allowed` sobre el rol de ejecución e `implicitDeny` sobre cualquier otro:
 
    ```sh
+   DEPLOY_USER="$(aws iam get-user --user-name bitmarket-ci-deploy --query User.Arn --output text)"
    aws iam simulate-principal-policy \
-     --policy-source-arn "$(aws iam get-user --user-name bitmarket-ci-deploy --query User.Arn --output text)" \
-     --action-names rds:CreateDBInstance iam:CreateRole iam:PutUserPolicy \
+     --policy-source-arn "$DEPLOY_USER" \
+     --action-names rds:CreateDBInstance ecs:CreateService elasticloadbalancing:CreateLoadBalancer iam:CreateRole iam:PutUserPolicy \
      --context-entries ContextKeyName=aws:RequestedRegion,ContextKeyValues=us-east-2,ContextKeyType=string \
      --query 'EvaluationResults[].[EvalActionName,EvalDecision]' --output table --no-cli-pager
+   EXECUTION_ROLE="$(aws iam get-role --role-name bitmarket-ecs-execution --query Role.Arn --output text)"
+   aws iam simulate-principal-policy \
+     --policy-source-arn "$DEPLOY_USER" \
+     --action-names iam:PassRole \
+     --resource-arns "$EXECUTION_ROLE" "${EXECUTION_ROLE%/*}/otro-rol" \
+     --context-entries ContextKeyName=aws:RequestedRegion,ContextKeyValues=us-east-2,ContextKeyType=string ContextKeyName=iam:PassedToService,ContextKeyValues=ecs-tasks.amazonaws.com,ContextKeyType=string \
+     --query 'EvaluationResults[].ResourceSpecificResults[].[EvalResourceName,EvalResourceDecision]' --output table --no-cli-pager
    ```
 
 3. Crea el Environment y limítalo a `main`. El último comando debe mostrar solo `main`:
@@ -245,7 +253,32 @@ Hazlo una vez, desde la raíz del repositorio, con tus credenciales de administr
    gh secret list --env aws-deploy
    ```
 
-Para rotarlas, sigue el procedimiento de `bitmarket-ci-images` con este usuario y este Environment.
+5. Crea los *service-linked roles* de ECS y del balanceador, que el usuario de despliegue no puede crear ([ADR-0017](docs/adr/0017-roles-de-ecs-en-la-capa-permanente.md)). Si ya existen, los comandos solo muestran su nombre:
+
+   ```sh
+   aws iam get-role --role-name AWSServiceRoleForECS --query Role.RoleName --output text --no-cli-pager 2>/dev/null \
+     || aws iam create-service-linked-role --aws-service-name ecs.amazonaws.com --query Role.RoleName --output text --no-cli-pager
+   aws iam get-role --role-name AWSServiceRoleForElasticLoadBalancing --query Role.RoleName --output text --no-cli-pager 2>/dev/null \
+     || aws iam create-service-linked-role --aws-service-name elasticloadbalancing.amazonaws.com --query Role.RoleName --output text --no-cli-pager
+   ```
+
+6. Carga los secretos del backend. La contraseña de `bitmarket_bff` se genera en hexadecimal porque Flyway la escribe literalmente en el SQL y no admite comillas simples. El token es el de prueba de Mercado Pago (`APP_USR-…`), y `read` lo pide sin mostrarlo:
+
+   ```sh
+   aws ssm put-parameter --region us-east-2 --name /bitmarket/bff-db-password --type SecureString --overwrite --value "$(openssl rand -hex 32)" --query Version --output text --no-cli-pager
+   printf 'Token de Mercado Pago: '; read -rs MP_TOKEN; echo
+   aws ssm put-parameter --region us-east-2 --name /bitmarket/mercadopago-access-token --type SecureString --overwrite --value "$MP_TOKEN" --query Version --output text --no-cli-pager
+   unset MP_TOKEN
+   ```
+
+7. Comprueba que los valores no entraron en el estado. Acepta el *refresh*; el último comando debe mostrar `0`:
+
+   ```sh
+   terraform -chdir=infra/permanent apply -refresh-only
+   terraform -chdir=infra/permanent state pull | jq '[.resources[] | select(.type == "aws_ssm_parameter") | .instances[] | select((.attributes.value // "") != "")] | length'
+   ```
+
+Para rotar las llaves, sigue el procedimiento de `bitmarket-ci-images` con este usuario y este Environment. Para cambiar un secreto, repite su `put-parameter`, sin tocar `value_wo_version` en Terraform: cambiarlo escribiría el *placeholder* encima del valor real.
 
 ### Ensayar en local
 
@@ -258,7 +291,7 @@ La capa efímera se crea y destruye desde CI. La excepción es este ensayo, que 
    aws sts get-caller-identity --query Arn --output text
    ```
 
-2. Crea el entorno. RDS tarda varios minutos:
+2. Crea el entorno con la imagen más reciente. RDS tarda varios minutos, y `apply` termina cuando la tarea del backend está sana:
 
    ```sh
    cd infra/ephemeral
@@ -270,6 +303,8 @@ La capa efímera se crea y destruye desde CI. La excepción es este ensayo, que 
    fi
    export TF_VAR_created_at="$created_at"
    echo "$TF_VAR_created_at"
+   export TF_VAR_backend_image_tag="$(aws ecr describe-images --repository-name bitmarket/backend --query 'sort_by(imageDetails,&imagePushedAt)[-1].imageTags[0]' --output text)"
+   echo "$TF_VAR_backend_image_tag"
    terraform apply
    ```
 
@@ -281,7 +316,28 @@ La capa efímera se crea y destruye desde CI. La excepción es este ensayo, que 
    aws ec2 describe-nat-gateways --filter Name=vpc-id,Values="$(terraform output -raw vpc_id)" --query 'length(NatGateways)'
    ```
 
-4. Comprueba los recursos etiquetados. El primer comando debe contar como mínimo 1 `db`, 1 `internet-gateway`, 2 `route-table`, 1 `security-group`, 1 `subgrp`, 4 `subnet` y 1 `vpc`; puede aparecer además un `secret`. Después, repite la resolución de la fecha: debe mostrar la misma del paso 2, y el `plan` debe responder `No changes`:
+   Comprueba el backend: balanceador `internal`, `Running` en `1` con `Public` en `ENABLED`, destino `healthy`, y en `Secrets` solo ARN. Después, las reglas de entrada: ninguna en `bitmarket-load-balancer`, el puerto 8080 solo desde el grupo del balanceador en `bitmarket-backend` y el 5432 solo desde el grupo del backend en `bitmarket-database`:
+
+   ```sh
+   aws elbv2 describe-load-balancers --names bitmarket --query 'LoadBalancers[0].Scheme' --output text
+   aws ecs describe-services --cluster "$(terraform output -raw ecs_cluster_name)" --services "$(terraform output -raw backend_service_name)" --query 'services[0].{Running:runningCount,Public:networkConfiguration.awsvpcConfiguration.assignPublicIp}'
+   aws elbv2 describe-target-health --target-group-arn "$(terraform output -raw backend_target_group_arn)" --query 'TargetHealthDescriptions[].TargetHealth.State' --output text
+   aws ecs describe-task-definition --task-definition bitmarket-backend --query 'taskDefinition.containerDefinitions[0].secrets'
+   for name in bitmarket-load-balancer bitmarket-backend bitmarket-database; do
+     group=$(aws ec2 describe-security-groups --filters Name=vpc-id,Values="$(terraform output -raw vpc_id)" Name=group-name,Values="$name" --query 'SecurityGroups[0].GroupId' --output text)
+     echo "$name ($group)"
+     aws ec2 describe-security-group-rules --filters Name=group-id,Values="$group" --query 'SecurityGroupRules[?!IsEgress].{Port:FromPort,From:ReferencedGroupInfo.GroupId}' --output text
+   done
+   aws logs describe-log-groups --log-group-name-prefix /ecs/bitmarket-backend --query 'logGroups[0].retentionInDays'
+   ```
+
+   El usuario de despliegue no puede leer los logs. Para ver las migraciones de Flyway, usa otra terminal con tus credenciales:
+
+   ```sh
+   aws logs tail /ecs/bitmarket-backend --region us-east-2 --since 30m --format short | grep -i -E 'flyway|migrat'
+   ```
+
+4. Comprueba los recursos etiquetados. El primer comando debe contar como mínimo 1 `cluster`, 1 `db`, 1 `internet-gateway`, 1 `listener`, 1 `listener-rule`, 1 `loadbalancer`, 1 `log-group`, 2 `route-table`, 3 `security-group`, 1 `service`, 1 `subgrp`, 4 `subnet`, 1 `targetgroup`, 1 `task-definition` y 1 `vpc`; pueden aparecer además un `secret` y varios `security-group-rule`. Después, repite la resolución de la fecha: debe mostrar la misma del paso 2, y el `plan` debe responder `No changes`:
 
    ```sh
    aws resourcegroupstaggingapi get-resources --tag-filters Key=bitmarket:created-at --query 'ResourceTagMappingList[].ResourceARN' --output text | tr '\t' '\n' | sed -E 's/^arn:aws:[^:]+:[^:]*:[^:]*:([^:/]+).*/\1/' | sort | uniq -c
@@ -295,10 +351,12 @@ La capa efímera se crea y destruye desde CI. La excepción es este ensayo, que 
    terraform plan
    ```
 
-5. Destruye el entorno:
+5. Destruye el entorno y borra las revisiones de la task definition, que Terraform solo desregistra. El último comando debe mostrar `0`:
 
    ```sh
    terraform destroy
+   aws ecs list-task-definitions --family-prefix bitmarket-backend --status INACTIVE --query taskDefinitionArns --output json | jq -r '.[]' | xargs -r -n 10 aws ecs delete-task-definitions --query failures --task-definitions
+   aws ecs list-task-definitions --family-prefix bitmarket-backend --status INACTIVE --query 'length(taskDefinitionArns)'
    exit
    ```
 
@@ -313,10 +371,10 @@ Si un permiso falla, añádelo a `infra/permanent/iam_ci_deploy.tf`, aplica la c
 
 ### Levantar y destruir el entorno
 
-Los workflows solo se pueden lanzar cuando ya están en `main`:
+Los workflows solo se pueden lanzar cuando ya están en `main`. `env-up` recibe la etiqueta de la imagen del backend, que es el SHA completo de un commit publicado por el workflow `images`; si no existe en ECR, falla antes de crear nada:
 
 ```sh
-gh workflow run env-up --ref main
+gh workflow run env-up --ref main -f image_tag="$(git rev-parse origin/main)"
 gh workflow run env-down --ref main
 gh run list --workflow env-up --limit 1
 ```

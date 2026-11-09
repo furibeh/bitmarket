@@ -2,6 +2,11 @@ name: env-up
 
 on:
   workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Tag of the backend image in ECR (the commit SHA)
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -29,6 +34,11 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-2
+      # Before Terraform runs, so that a missing tag creates nothing.
+      - name: Check that the backend image exists
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: aws ecr describe-images --repository-name bitmarket/backend --image-ids imageTag="$IMAGE_TAG" > /dev/null
       - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: "1.17.1"
@@ -48,4 +58,6 @@ jobs:
           fi
           echo "TF_VAR_created_at=$created_at" >> "$GITHUB_ENV"
       - name: Apply the ephemeral layer
+        env:
+          TF_VAR_backend_image_tag: ${{ inputs.image_tag }}
         run: terraform apply -input=false -auto-approve
