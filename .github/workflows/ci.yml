@@ -74,3 +74,10 @@ jobs:
       - name: Test Post Confirmation Lambda
         working-directory: infra/permanent/lambda/post-confirmation
         run: node --test test/handler.test.mjs
+      # Steps instead of a matrix: a matrix would rename the required check.
+      - name: Check the ephemeral layer
+        working-directory: infra/ephemeral
+        run: |
+          terraform fmt -check -recursive
+          terraform init -backend=false -input=false -lockfile=readonly
+          terraform validate
