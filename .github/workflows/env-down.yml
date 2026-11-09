@@ -51,14 +51,22 @@ jobs:
         env:
           TF_VAR_backend_image_tag: unused-on-destroy
         run: terraform destroy -input=false -auto-approve
-      # The provider only deregisters task definitions, and INACTIVE revisions
-      # stay tagged. The API accepts at most 10 revisions per call.
+      # The provider only deregisters task definitions, so INACTIVE revisions
+      # remain. The API accepts at most 10 revisions per call and exits 0 even
+      # when it reports revisions it could not delete.
       - name: Delete the inactive task definitions
         run: |
+          set -o pipefail
           revisions=$(aws ecs list-task-definitions \
             --family-prefix bitmarket-backend \
             --status INACTIVE \
             --query taskDefinitionArns \
             --output json)
-          jq -r '.[]' <<<"$revisions" \
-            | xargs -r -n 10 aws ecs delete-task-definitions --query failures --task-definitions
+          failures=$(jq -r '.[]' <<<"$revisions" \
+            | xargs -r -n 10 aws ecs delete-task-definitions --query failures --output json --task-definitions \
+            | jq -s 'add // []')
+          if [ "$(jq length <<<"$failures")" -ne 0 ]; then
+            echo "Could not delete these task definitions:" >&2
+            echo "$failures" >&2
+            exit 1
+          fi
