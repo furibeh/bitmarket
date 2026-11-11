@@ -42,6 +42,7 @@ Los marcados TODO todavía no existen.
 | Levantar y destruir la capa efímera | `gh workflow run env-up --ref main -f image_tag=<sha>` y `gh workflow run env-down --ref main`; preparación y ensayo en "Capa efímera de AWS" en `README.md` |
 | Migraciones | Flyway al arrancar el backend; nuevas en `backend/src/main/resources/db/migration/` |
 | Tablas de sesión (esquema `bff`) | `cd frontend && pnpm auth:migrate` (Better Auth; después de arrancar el backend) |
+| Regenerar el contrato OpenAPI (`backend/openapi.json`) | `cd backend && ./mvnw verify -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=OpenApiContractIT -Dopenapi.update=true` (tras cambiar una ruta o un DTO; se versiona con el cambio) |
 | Tipos API frontend | TODO regenerar desde OpenAPI con `openapi-typescript` |
 
 ## Arquitectura

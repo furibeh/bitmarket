@@ -1,0 +1,223 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "OpenAPI definition",
+    "version" : "v0"
+  },
+  "paths" : {
+    "/api/inventory/availability" : {
+      "get" : {
+        "tags" : [ "availability-controller" ],
+        "operationId" : "getAvailability",
+        "parameters" : [ {
+          "name" : "skus",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/SkuAvailability"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "skus is missing, empty, has a blank SKU or has more than 100 SKUs",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/catalog/products" : {
+      "get" : {
+        "tags" : [ "catalog-controller" ],
+        "operationId" : "listProducts",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ProductSummary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/catalog/products/{id}" : {
+      "get" : {
+        "tags" : [ "catalog-controller" ],
+        "operationId" : "getProduct",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProductDetail"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "The id is not a UUID",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "The product does not exist or is inactive",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "ProblemDetail" : {
+        "type" : "object",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "format" : "uri"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "detail" : {
+            "type" : "string"
+          },
+          "instance" : {
+            "type" : "string",
+            "format" : "uri"
+          },
+          "properties" : {
+            "type" : "object",
+            "additionalProperties" : { }
+          }
+        }
+      },
+      "SkuAvailability" : {
+        "type" : "object",
+        "properties" : {
+          "sku" : {
+            "type" : "string"
+          },
+          "available" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "available", "sku" ]
+      },
+      "ProductSummary" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "category" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "category", "id", "name" ]
+      },
+      "ProductDetail" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "category" : {
+            "type" : "string"
+          },
+          "variants" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/VariantView"
+            }
+          }
+        },
+        "required" : [ "category", "description", "id", "name", "variants" ]
+      },
+      "VariantView" : {
+        "type" : "object",
+        "properties" : {
+          "sku" : {
+            "type" : "string"
+          },
+          "attributes" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          },
+          "priceCop" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        },
+        "required" : [ "attributes", "priceCop", "sku" ]
+      }
+    }
+  }
+}

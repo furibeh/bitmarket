@@ -127,11 +127,11 @@ Añadir un evento exige añadir su fila a esta tabla.
 
 ### 5.3 Contratos HTTP
 
-El contrato vinculante es el **OpenAPI generado por springdoc-openapi**; las rutas siguientes son indicativas.
+El contrato vinculante es el **OpenAPI generado por springdoc-openapi** (`/v3/api-docs`, sin Swagger UI); las rutas siguientes son indicativas. `backend/openapi.json` es su copia versionada: el frontend genera sus tipos de ese archivo y `OpenApiContractIT` falla si deja de coincidir con el contrato generado.
 
 | Superficie | Rutas | Autenticación |
 | --- | --- | --- |
-| Tienda (vía BFF) | `GET /api/catalog/...` (público); `/api/cart/...`; `POST /api/orders` (checkout), `GET /api/orders[/{id}]`, `POST /api/orders/{id}/cancel`, `POST /api/orders/{id}/payments` | JWT de Cognito, grupo `CUSTOMER` (salvo catálogo) |
+| Tienda (vía BFF) | `GET /api/catalog/...` (público); `GET /api/inventory/availability?skus=…` (público: cantidad disponible por SKU, 0 si no tiene fila de stock, de 1 a 100 SKU por consulta; el BFF la compone con el catálogo porque `catalog` no depende de `inventory`); `/api/cart/...`; `POST /api/orders` (checkout), `GET /api/orders[/{id}]`, `POST /api/orders/{id}/cancel`, `POST /api/orders/{id}/payments` | JWT de Cognito, grupo `CUSTOMER` (salvo catálogo y disponibilidad) |
 | Administración (vía BFF) | `/api/admin/products`, `/api/admin/variants/{sku}/stock-adjustments`, `/api/admin/images/upload-url`, `/api/admin/orders/{id}/ship`, `/deliver`, `/api/admin/alerts/{id}/attend` | JWT, grupo `ADMIN` |
 | Webhook | `POST /webhooks/mercadopago` | `x-signature` (HMAC con el secreto del webhook) |
 | MCP | `/mcp` (Streamable HTTP); la respuesta 401 incluye `WWW-Authenticate: Bearer resource_metadata="…"` | OAuth de Cognito, grupo `ADMIN` |

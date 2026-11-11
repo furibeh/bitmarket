@@ -8,6 +8,9 @@ spring:
   flyway:
     placeholders:
       bff_password: ${BFF_DB_PASSWORD:bitmarket_bff}
+  mvc:
+    problemdetails:
+      enabled: true
   jpa:
     open-in-view: false
     hibernate:
