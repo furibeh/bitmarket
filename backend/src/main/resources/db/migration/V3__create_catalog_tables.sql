@@ -21,7 +21,12 @@ CREATE TABLE variant (
     sku        text    NOT NULL UNIQUE,
     attributes jsonb   NOT NULL,
     price_cop  bigint  NOT NULL CHECK (price_cop > 0),
-    active     boolean NOT NULL
+    active     boolean NOT NULL,
+    -- Attributes are a flat key-value object with text values (RN-05).
+    CONSTRAINT variant_attributes_key_value_check CHECK (
+        jsonb_typeof(attributes) = 'object'
+        AND NOT jsonb_path_exists(attributes, '$.* ? (@.type() != "string")')
+    )
 );
 
 CREATE INDEX variant_product_id_idx ON variant (product_id);
