@@ -107,6 +107,34 @@ class CatalogMigrationIT {
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
+  @Test
+  @DisplayName("RN-05: unos atributos que no son un objeto clave-valor se rechazan")
+  void rejectsAttributesThatAreNotAnObject() {
+    UUID product = fixtures.product(fixtures.category("Phones"), "Array phone", true);
+
+    assertThatThrownBy(
+            () -> fixtures.variant(product, uniqueSku("ARRAY"), "[\"negro\"]", 1_000_000L, true))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("attributes");
+  }
+
+  @Test
+  @DisplayName("RN-05: un atributo cuyo valor no es texto se rechaza")
+  void rejectsAttributeValuesThatAreNotText() {
+    UUID product = fixtures.product(fixtures.category("Phones"), "Nested phone", true);
+
+    assertThatThrownBy(
+            () ->
+                fixtures.variant(
+                    product,
+                    uniqueSku("NESTED"),
+                    "{\"color\": {\"nombre\": \"negro\"}}",
+                    1_000_000L,
+                    true))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("attributes");
+  }
+
   private boolean tableExists(String table) {
     return Boolean.TRUE.equals(
         jdbc.queryForObject("SELECT to_regclass(?) IS NOT NULL", Boolean.class, "public." + table));

@@ -1,5 +1,6 @@
 package com.bitmarket.inventory;
 
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toMap;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -7,6 +8,7 @@ import com.bitmarket.TestcontainersConfiguration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +33,7 @@ class AvailabilityApiIT {
   @Autowired JdbcTemplate jdbc;
 
   @Test
-  @DisplayName("RN-01: devuelve la cantidad disponible de cada SKU pedido")
+  @DisplayName("CU-02: devuelve la cantidad disponible de cada SKU pedido")
   void returnsAvailablePerSku() {
     String first = stock("FIRST", 7);
     String second = stock("SECOND", 3);
@@ -60,7 +62,32 @@ class AvailabilityApiIT {
   void duplicatedSkuIsReturnedOnce() {
     String sku = stock("REPEATED", 4);
 
-    assertThat(getAvailability(sku + "," + sku)).hasSize(1);
+    assertThat(getAvailability(sku + "," + sku))
+        .containsExactly(Map.of("sku", sku, "available", 4));
+  }
+
+  @Test
+  @DisplayName("CU-02: acepta hasta 100 SKU en una consulta")
+  void maximumNumberOfSkusIsAccepted() {
+    assertThat(getAvailability(numberedSkus(100))).hasSize(100);
+  }
+
+  @Test
+  @DisplayName("CU-02: más de 100 SKU en una consulta responde 400 problem+json")
+  void moreThanMaximumSkusIsBadRequestProblem() {
+    expectBadRequestProblem("/api/inventory/availability?skus={skus}", numberedSkus(101));
+  }
+
+  @Test
+  @DisplayName("CU-02: el parámetro skus vacío responde 400 problem+json")
+  void emptySkusParamIsBadRequestProblem() {
+    expectBadRequestProblem("/api/inventory/availability?skus={skus}", "");
+  }
+
+  @Test
+  @DisplayName("CU-02: un SKU en blanco en la consulta responde 400 problem+json")
+  void blankSkuIsBadRequestProblem() {
+    expectBadRequestProblem("/api/inventory/availability?skus={skus}", "FIRST,,SECOND");
   }
 
   @Test
@@ -85,6 +112,22 @@ class AvailabilityApiIT {
         .exchange()
         .expectStatus()
         .isOk();
+  }
+
+  private void expectBadRequestProblem(String uriTemplate, String skus) {
+    client
+        .get()
+        .uri(uriTemplate, skus)
+        .exchange()
+        .expectStatus()
+        .isBadRequest()
+        .expectHeader()
+        .contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON);
+  }
+
+  private static String numberedSkus(int count) {
+    String prefix = "BULK-" + UUID.randomUUID() + "-";
+    return IntStream.range(0, count).mapToObj(index -> prefix + index).collect(joining(","));
   }
 
   private String stock(String prefix, int available) {

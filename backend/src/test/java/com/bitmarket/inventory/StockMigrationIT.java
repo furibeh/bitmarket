@@ -72,7 +72,7 @@ class StockMigrationIT {
   }
 
   @Test
-  @DisplayName("RN-01: cada variante de la semilla tiene su fila de stock")
+  @DisplayName("CU-02: cada variante de la semilla tiene su fila de stock")
   void everySeedVariantHasAStockRow() {
     List<String> variantSkus = freshDatabase.queryForList("SELECT sku FROM variant", String.class);
     List<String> stockSkus = freshDatabase.queryForList("SELECT sku FROM stock", String.class);
