@@ -8,7 +8,7 @@
     "/api/inventory/availability" : {
       "get" : {
         "tags" : [ "availability-controller" ],
-        "operationId" : "availability",
+        "operationId" : "getAvailability",
         "parameters" : [ {
           "name" : "skus",
           "in" : "query",
@@ -33,6 +33,16 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "skus is missing, empty, has a blank SKU or has more than 100 SKUs",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -40,7 +50,7 @@
     "/api/catalog/products" : {
       "get" : {
         "tags" : [ "catalog-controller" ],
-        "operationId" : "list",
+        "operationId" : "listProducts",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -61,7 +71,7 @@
     "/api/catalog/products/{id}" : {
       "get" : {
         "tags" : [ "catalog-controller" ],
-        "operationId" : "detail",
+        "operationId" : "getProduct",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -81,6 +91,26 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "The id is not a UUID",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "The product does not exist or is inactive",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -88,6 +118,33 @@
   },
   "components" : {
     "schemas" : {
+      "ProblemDetail" : {
+        "type" : "object",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "format" : "uri"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "detail" : {
+            "type" : "string"
+          },
+          "instance" : {
+            "type" : "string",
+            "format" : "uri"
+          },
+          "properties" : {
+            "type" : "object",
+            "additionalProperties" : { }
+          }
+        }
+      },
       "SkuAvailability" : {
         "type" : "object",
         "properties" : {

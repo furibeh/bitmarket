@@ -2,12 +2,16 @@ package com.bitmarket.catalog.internal;
 
 import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,6 +32,7 @@ class CatalogController {
   }
 
   @GetMapping
+  @Operation(operationId = "listProducts")
   List<ProductSummary> list() {
     return products.findByActiveTrueOrderByName().stream()
         .map(
@@ -38,6 +43,22 @@ class CatalogController {
   }
 
   @GetMapping("/{id}")
+  @Operation(operationId = "getProduct")
+  @ApiResponse(responseCode = "200")
+  @ApiResponse(
+      responseCode = "400",
+      description = "The id is not a UUID",
+      content =
+          @Content(
+              mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+              schema = @Schema(implementation = ProblemDetail.class)))
+  @ApiResponse(
+      responseCode = "404",
+      description = "The product does not exist or is inactive",
+      content =
+          @Content(
+              mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+              schema = @Schema(implementation = ProblemDetail.class)))
   ProductDetail detail(@PathVariable UUID id) {
     Product product =
         products
